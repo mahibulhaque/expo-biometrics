@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "expo-biometrics": ["../src/index"],
+      "expo-biometrics/*": ["../src/*"]
+    }
+  }
+}
