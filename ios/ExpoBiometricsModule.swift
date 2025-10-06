@@ -1,48 +1,79 @@
 import ExpoModulesCore
+import LocalAuthentication
 
 public class ExpoBiometricsModule: Module {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
-  public func definition() -> ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoBiometrics')` in JavaScript.
-    Name("ExpoBiometrics")
+    public func definition() -> ModuleDefinition {
+        Name("ExpoBiometrics")
 
-    // Defines constant property on the module.
-    Constant("PI") {
-      Double.pi
-    }
+        AsyncFunction("hasHardwareAsync") { () -> Bool in
+            let context = LAContext()
+            var error: NSError?
+            let isSupported: Bool = context.canEvaluatePolicy(
+                LAPolicy.deviceOwnerAuthenticationWithBiometrics,
+                error: &error
+            )
+            let isAvailable: Bool =
+                isSupported
+                || error?.code != LAError.biometryNotAvailable.rawValue
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      return "Hello world! 👋"
-    }
-
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { (value: String) in
-      // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
-      ])
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(ExpoBiometricsView.self) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { (view: ExpoBiometricsView, url: URL) in
-        if view.webView.url != url {
-          view.webView.load(URLRequest(url: url))
+            return isAvailable
         }
-      }
 
-      Events("onLoad")
+        AsyncFunction("isEnrolledAsync") { () -> Bool in
+            let context = LAContext()
+            var error: NSError?
+            let isSupported: Bool = context.canEvaluatePolicy(
+                LAPolicy.deviceOwnerAuthenticationWithBiometrics,
+                error: &error
+            )
+            let isEnrolled: Bool =
+                (isSupported && error == nil)
+                || error?.code == LAError.biometryLockout.rawValue
+
+            return isEnrolled
+        }
+
+        AsyncFunction("supportedAuthenticationTypesAsync") { () -> [Int] in
+            var supportedAuthenticationTypes: [Int] = []
+
+            if isTouchIdDevice() {
+                supportedAuthenticationTypes.append(
+                    AuthenticationType.fingerprint.rawValue
+                )
+            }
+
+            if isFaceIdDevice() {
+                supportedAuthenticationTypes.append(
+                    AuthenticationType.facialRecognition.rawValue
+                )
+            }
+
+            return supportedAuthenticationTypes
+        }
     }
-  }
+}
+
+func isFaceIdDevice() -> Bool {
+    let context = LAContext()
+    context.canEvaluatePolicy(
+        LAPolicy.deviceOwnerAuthenticationWithBiometrics,
+        error: nil
+    )
+
+    return context.biometryType == LABiometryType.faceID
+}
+
+func isTouchIdDevice() -> Bool {
+    let context = LAContext()
+    context.canEvaluatePolicy(
+        LAPolicy.deviceOwnerAuthenticationWithBiometrics,
+        error: nil
+    )
+
+    return context.biometryType == LABiometryType.touchID
+}
+
+enum AuthenticationType: Int {
+    case fingerprint = 1
+    case facialRecognition = 2
 }
