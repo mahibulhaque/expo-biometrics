@@ -1,10 +1,11 @@
 import ExpoModulesCore
 import LocalAuthentication
+import Security
 
 public class ExpoBiometricsModule: Module {
     public func definition() -> ModuleDefinition {
         Name("ExpoBiometrics")
-
+        
         AsyncFunction("hasHardwareAsync") { () -> Bool in
             let context = LAContext()
             var error: NSError?
@@ -13,12 +14,12 @@ public class ExpoBiometricsModule: Module {
                 error: &error
             )
             let isAvailable: Bool =
-                isSupported
-                || error?.code != LAError.biometryNotAvailable.rawValue
-
+            isSupported
+            || error?.code != LAError.biometryNotAvailable.rawValue
+            
             return isAvailable
         }
-
+        
         AsyncFunction("isEnrolledAsync") { () -> Bool in
             let context = LAContext()
             var error: NSError?
@@ -27,29 +28,50 @@ public class ExpoBiometricsModule: Module {
                 error: &error
             )
             let isEnrolled: Bool =
-                (isSupported && error == nil)
-                || error?.code == LAError.biometryLockout.rawValue
-
+            (isSupported && error == nil)
+            || error?.code == LAError.biometryLockout.rawValue
+            
             return isEnrolled
         }
-
+        
         AsyncFunction("supportedAuthenticationTypesAsync") { () -> [Int] in
             var supportedAuthenticationTypes: [Int] = []
-
+            
             if isTouchIdDevice() {
                 supportedAuthenticationTypes.append(
                     AuthenticationType.fingerprint.rawValue
                 )
             }
-
+            
             if isFaceIdDevice() {
                 supportedAuthenticationTypes.append(
                     AuthenticationType.facialRecognition.rawValue
                 )
             }
-
+            
             return supportedAuthenticationTypes
         }
+        
+        AsyncFunction("createKeys"){
+            
+        }
+        
+        AsyncFunction("deleteKeys"){
+            
+        }
+        
+        AsyncFunction("createSignature"){
+            
+        }
+        
+        AsyncFunction("simplePrompt"){
+            
+        }
+    }
+    
+    private func getBiometricKeyTag()->Data{
+        let biometricKeyAlias = "com.expobiometrics.biometricKey"
+        return biometricKeyAlias.data(using: .utf8)!
     }
 }
 
@@ -59,7 +81,7 @@ func isFaceIdDevice() -> Bool {
         LAPolicy.deviceOwnerAuthenticationWithBiometrics,
         error: nil
     )
-
+    
     return context.biometryType == LABiometryType.faceID
 }
 
@@ -69,7 +91,7 @@ func isTouchIdDevice() -> Bool {
         LAPolicy.deviceOwnerAuthenticationWithBiometrics,
         error: nil
     )
-
+    
     return context.biometryType == LABiometryType.touchID
 }
 
