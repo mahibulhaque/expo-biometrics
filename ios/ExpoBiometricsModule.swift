@@ -52,20 +52,42 @@ public class ExpoBiometricsModule: Module {
             return supportedAuthenticationTypes
         }
         
-        AsyncFunction("createKeys"){
+        AsyncFunction("createKeysAsync") { (keyTag: String) throws -> [String: Any] in
+            guard let publicKey = try KeychainHelper.createSecureEnclaveKey(tag: keyTag) else {
+                throw GenericError("Unable to create secure enclave key")
+            }
             
+            return ["publicKey": publicKey]
         }
         
-        AsyncFunction("deleteKeys"){
-            
+        AsyncFunction("deleteKeysAsync") { (keyTag: String) throws -> Bool in
+            try KeychainHelper.deleteKey(tag: keyTag)
+            return true
         }
         
-        AsyncFunction("createSignature"){
-            
+        AsyncFunction("doesKeyExistAsync") { (keyTag: String) -> Bool in
+            return KeychainHelper.keyExists(tag: keyTag)
         }
         
-        AsyncFunction("simplePrompt"){
+        AsyncFunction("signPayloadAsync") { (keyTag: String, payload: String) throws -> [String: Any] in
+            let signature = try KeychainHelper.signPayload(tag: keyTag, payload: payload)
+            return ["signature": signature]
+        }
+        
+        AsyncFunction("simplePromptAsync") { (reason: String) async throws -> [String: Any] in
+            let context = LAContext()
+            let policy = LAPolicy.deviceOwnerAuthenticationWithBiometrics
             
+            return try await withCheckedThrowingContinuation { continuation in
+                context.evaluatePolicy(policy, localizedReason: reason) { success, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    
+                    continuation.resume(returning: ["success": success])
+                }
+            }
         }
     }
     
