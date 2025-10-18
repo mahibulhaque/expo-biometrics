@@ -28,11 +28,11 @@
   "author": "mahibulhaque <mahibulhaque2000@gmail.com> (mahibulhaque)",
   "license": "MIT",
   "homepage": "https://github.com/mahibulhaque/expo-biometrics#readme",
-  "dependencies": {},
   "devDependencies": {
+    "@types/invariant": "^2.2.37",
     "@types/react": "~19.1.0",
-    "expo-module-scripts": "^5.0.7",
     "expo": "^54.0.10",
+    "expo-module-scripts": "^5.0.7",
     "react-native": "0.81.4"
   },
   "peerDependencies": {
