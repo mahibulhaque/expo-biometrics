@@ -1,23 +1,18 @@
 package expo.modules.biometrics
 
-import androidx.biometric.BiometricManager
-import expo.modules.kotlin.types.Enumerable
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
+import expo.modules.kotlin.types.Enumerable
 
 internal enum class BiometricsSecurityLevel(val value: String) : Enumerable {
     WEAK("weak"),
     STRONG("strong");
-
-    fun toNativeBiometricSecurityLevel(): Int {
-        return when (this) {
-            WEAK -> BiometricManager.Authenticators.BIOMETRIC_WEAK
-            STRONG -> BiometricManager.Authenticators.BIOMETRIC_STRONG
-        }
-    }
 }
 
-internal class AuthOptions : Record {
+internal class CreateSignatureRequest : Record {
+    @Field
+    val payload: String = ""
+
     @Field
     val promptMessage: String = ""
 
@@ -31,11 +26,33 @@ internal class AuthOptions : Record {
     val cancelLabel: String? = null
 
     @Field
-    val disableDeviceFallback: Boolean = false
+    val requireConfirmation: Boolean = true
+}
+
+internal class CreateSignatureResponse : Record {
+    @Field
+    var signature: String = ""
+
+    @Field
+    var success: Boolean = false
+
+    @Field
+    var error: String? = null
+}
+
+internal class SimplePromptRequest:Record{
+    @Field
+    val promptMessage: String = ""
+
+    @Field
+    val promptSubtitle: String? = null
+
+    @Field
+    val promptDescription: String? = null
+
+    @Field
+    val cancelLabel: String? = null
 
     @Field
     val requireConfirmation: Boolean = true
-
-    @Field
-    val biometricsSecurityLevel: BiometricsSecurityLevel = BiometricsSecurityLevel.WEAK
 }

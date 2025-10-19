@@ -9,6 +9,7 @@ import androidx.fragment.app.FragmentActivity
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.exception.Exceptions
+import expo.modules.kotlin.exception.UnexpectedException
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.concurrent.Executor
@@ -32,8 +33,6 @@ class ExpoBiometricsModule : Module() {
                 return@AsyncFunction results
             }
 
-            // note(cedric): replace hardcoded system feature strings with constants from
-            // PackageManager when dropping support for Android SDK 28
             results.apply {
                 addIf(
                     hasSystemFeature("android.hardware.fingerprint"),
@@ -78,10 +77,13 @@ class ExpoBiometricsModule : Module() {
             return@AsyncFunction level
         }
 
-        AsyncFunction("createKeysAsync") { alias: String ->
+        AsyncFunction("createKeysAsync") { key: String ->
             try {
-                val pubKey = KeyStoreSigner.createKey(alias)
-                mapOf("publicKey" to pubKey)
+                val pubKey = KeyStoreSigner.createKey(key)
+                mapOf(
+                    "publicKey" to pubKey,
+                    "success" to true
+                )
             } catch (e: Exception) {
                 throw CodedException("key_create_failed: ${e.message ?: "Failed to create key"}")
             }
@@ -100,23 +102,28 @@ class ExpoBiometricsModule : Module() {
             KeyStoreSigner.hasKey(alias)
         }
 
-        AsyncFunction("createSignatureAsync") { promise: Promise, alias: String, payload: String ->
+        AsyncFunction("createSignatureAsync") { request: CreateSignatureRequest, promise: Promise ->
             val activity = appContext.currentActivity as? FragmentActivity
                 ?: run {
-                    promise.reject(CodedException("No activity available for biometric prompt"))
+                    promise.reject(Exceptions.MissingActivity())
                     return@AsyncFunction
                 }
 
             val executor: Executor = ContextCompat.getMainExecutor(context)
+            val response = CreateSignatureResponse()
+
 
             val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                .setTitle("Biometric Authentication")
-                .setSubtitle("Authenticate to sign the payload")
-                .setNegativeButtonText("Cancel")
+                .setTitle(request.promptMessage)
+                .setSubtitle(request.promptSubtitle)
+                .setDescription(request.promptDescription)
+                .setNegativeButtonText(request.cancelLabel ?: "Cancel")
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                .setConfirmationRequired(request.requireConfirmation)
                 .build()
 
             try {
-                val signature = KeyStoreSigner.getSignature(alias)
+                val signature = KeyStoreSigner.getSignature(request.payload)
                 val cryptoObject = BiometricPrompt.CryptoObject(signature)
 
                 val biometricPrompt = BiometricPrompt(
@@ -126,23 +133,21 @@ class ExpoBiometricsModule : Module() {
                         override fun onAuthenticationSucceeded(authResult: BiometricPrompt.AuthenticationResult) {
                             super.onAuthenticationSucceeded(authResult)
                             try {
-                                signature.update(payload.toByteArray())
+                                signature.update(request.payload.toByteArray())
                                 val signedData = signature.sign()
                                 val base64Signature = android.util.Base64.encodeToString(
                                     signedData,
                                     android.util.Base64.NO_WRAP
                                 )
-                                promise.resolve(
-                                    mapOf(
-                                        "success" to true,
-                                        "signature" to base64Signature
-                                    )
-                                )
+                                response.success = true
+                                response.signature = base64Signature
+                                promise.resolve(response)
                             } catch (e: Exception) {
+                                response.success = false
+                                response.error = e.message
                                 promise.reject(
-                                    CodedException(
-                                        "signature_failed",
-                                        e.message ?: "Failed to create signature",
+                                    UnexpectedException(
+                                        "Canceled authentication due to an internal error",
                                         e
                                     )
                                 )
@@ -181,19 +186,22 @@ class ExpoBiometricsModule : Module() {
             }
         }
 
-        AsyncFunction("simplePromptAsync") { promise: Promise, promptMessage: String ->
+        AsyncFunction("simplePromptAsync") { request: SimplePromptRequest, promise: Promise ->
             val activity = appContext.currentActivity as? FragmentActivity
                 ?: run {
-                    promise.reject(CodedException("No activity available for biometric prompt"))
+                    promise.reject(Exceptions.MissingActivity())
                     return@AsyncFunction
                 }
 
             val executor: Executor = ContextCompat.getMainExecutor(context)
 
             val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                .setTitle("Biometric Authentication")
-                .setSubtitle(promptMessage)
-                .setNegativeButtonText("Cancel")
+                .setTitle(request.promptMessage)
+                .setSubtitle(request.promptSubtitle)
+                .setDescription(request.promptDescription)
+                .setNegativeButtonText(request.cancelLabel ?: "Cancel")
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                .setConfirmationRequired(request.requireConfirmation)
                 .build()
 
             val biometricPrompt = BiometricPrompt(
@@ -268,4 +276,3 @@ fun <T> MutableSet<T>.addIf(condition: Boolean, valueToAdd: T) {
         add(valueToAdd)
     }
 }
-
