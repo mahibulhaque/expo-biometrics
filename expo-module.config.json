@@ -1,9 +1,9 @@
 {
-  "platforms": ["apple", "android", "web"],
-  "apple": {
-    "modules": ["ExpoBiometricsModule"]
-  },
-  "android": {
-    "modules": ["expo.modules.biometrics.ExpoBiometricsModule"]
-  }
+	"platforms": ["apple", "android"],
+	"apple": {
+		"modules": ["ExpoBiometricsModule"]
+	},
+	"android": {
+		"modules": ["expo.modules.biometrics.ExpoBiometricsModule"]
+	}
 }

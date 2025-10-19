@@ -74,20 +74,65 @@ Object.defineProperty(SecurityLevel, 'BIOMETRIC', {
  */
 export type BiometricsSecurityLevel = 'weak' | 'strong';
 
-export type CreateSignatureOptions = {
+export type BiometricAuthenticationOptions = {
 	/**
 	 * A message that is shown alongside the TouchID or FaceID prompt.
 	 */
 	promptMessage?: string;
 	/**
+	 * A subtitle displayed below the prompt message in the authentication prompt.
+	 * @platform android
+	 */
+	promptSubtitle?: string;
+	/**
+	 * A description displayed in the middle of the authentication prompt.
+	 * @platform android
+	 */
+	promptDescription?: string;
+	/**
 	 * Allows customizing the default `Cancel` label shown.
 	 */
 	cancelLabel?: string;
+	/**
+	 * Sets a hint to the system for whether to require user confirmation after authentication.
+	 * This may be ignored by the system if the user has disabled implicit authentication in Settings
+	 * or if it does not apply to a particular biometric modality. Defaults to `true`.
+	 * @platform android
+	 */
+	requireConfirmation?: boolean;
+	/**
+	 * Allows to customize the default `Use Passcode` label shown after several failed
+	 * authentication attempts. Setting this option to an empty string disables this button from
+	 * showing in the prompt.
+	 * @platform ios
+	 */
+	fallbackLabel?: string;
+};
 
+export type CreateSignatureRequest = BiometricAuthenticationOptions & {
 	/**
 	 * `Payload` property is required in order to generate the encrypted signature.
 	 */
 	payload: string;
+};
+
+export type CreateSignatureResponse = {
+	signature: string;
+	success: boolean;
+	error?: string;
+};
+
+export type SimplePromptRequest = BiometricAuthenticationOptions & {};
+
+export type SimplePromptResponse = {
+	success: boolean;
+	error?: string;
+};
+
+export type CreateKeysResponse = {
+	publicKey: string;
+	success: boolean;
+	error?: string;
 };
 
 /**
