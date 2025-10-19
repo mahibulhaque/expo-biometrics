@@ -80,31 +80,72 @@ public class ExpoBiometricsModule: Module {
             return supportedAuthenticationTypes
         }
         
-        AsyncFunction("createKeysAsync") { () throws -> [String: Any] in
-            guard let publicKey = try KeychainHelper.createSecureEnclaveKey(tag: self.defaultKeyTag) else {
-                throw GenericError("Unable to create secure enclave key")
+        AsyncFunction("createKeysAsync") { () async -> CreateKeysResponse in
+            var response = CreateKeysResponse()
+            
+            guard let publicKey = self.createSecureEnclaveKey(tag: self.defaultKeyTag) else {
+                response.error = "Failed to create key pair"
+                return response
             }
             
-            return ["publicKey": publicKey]
+            response.publicKey = publicKey
+            response.success = true
+            return response
         }
         
-        AsyncFunction("deleteKeysAsync") { () throws -> Bool in
-            try KeychainHelper.deleteKey(tag: self.defaultKeyTag)
-            return true
+        AsyncFunction("deleteKeysAsync") { () -> Bool in
+            return self.deleteKey(tag: self.defaultKeyTag)
         }
         
         AsyncFunction("doesKeyExistAsync") { () -> Bool in
-            return KeychainHelper.keyExists(tag: self.defaultKeyTag)
+            return self.keyExists(tag: self.defaultKeyTag)
         }
         
         
-        AsyncFunction("createSignatureAsync") { (options:CreateSignatureOptions) async throws -> [String: Any] in
+        
+        AsyncFunction("createSignatureAsync") { (options: CreateSignatureRequest) async -> CreateSignatureResponse in
+            var response = CreateSignatureResponse()
             let context = LAContext()
+            
+            context.localizedCancelTitle = options.cancelLabel
+            context.localizedFallbackTitle = options.fallbackLabel
+            
             let policy = LAPolicy.deviceOwnerAuthenticationWithBiometrics
+            
+            do {
+                let success = try await self.evaluateBiometricPolicy(
+                    context: context,
+                    reason: options.promptMessage ?? "Authenticate to sign payload",
+                    policy: policy
+                )
+                
+                guard success else {
+                    response.error = "User authentication failed or was canceled"
+                    return response
+                }
+                
+                if let signature = self.signPayload(tag: self.defaultKeyTag, payload: options.payload, context: context) {
+                    response.signature = signature
+                    response.success = true
+                } else {
+                    response.error = "Failed to sign payload"
+                }
+            } catch {
+                response.error = error.localizedDescription
+            }
+            
+            return response
+        }
+        
+        
+        AsyncFunction("simplePromptAsync") { (options:SimplePromptRequest) async -> SimplePromptResponse in
+            let context = LAContext()
+            let response = SimplePromptResponse()
             
             let reason = options.promptMessage ?? ""
             let cancelLabel = options.cancelLabel
             let fallbackLabel = options.fallbackLabel
+            
             
             if fallbackLabel != nil {
                 context.localizedFallbackTitle = fallbackLabel
@@ -114,53 +155,118 @@ public class ExpoBiometricsModule: Module {
                 context.localizedCancelTitle = cancelLabel
             }
             
-            let authSuccess:Bool = try await withCheckedThrowingContinuation { continuation in
-                context.evaluatePolicy(policy, localizedReason: reason) { success, error in
-                    if let error = error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume(returning: success)
-                    }
-                }
-            }
-            
-            guard authSuccess else {
-                throw GenericError("Authentication failed")
-            }
-            
-            let signature = try KeychainHelper.signPayload(tag: self.defaultKeyTag, payload: options.payload, context: context)
-            return ["signature": signature]
-        }
-        
-        
-        AsyncFunction("simplePromptAsync") { (options:SimplePromptOptions) async throws -> [String: Any] in
-            let context = LAContext()
-            
-            let reason = options.promptMessage ?? ""
-            let cancelLabel = options.cancelLabel
-            let fallbackLabel = options.fallbackLabel
-            
-            if fallbackLabel != nil {
-                context.localizedFallbackTitle = fallbackLabel
-            }
-            
-            if cancelLabel != nil {
-                context.localizedCancelTitle = cancelLabel
-            }
-            
             let policy = LAPolicy.deviceOwnerAuthenticationWithBiometrics
             
-            return try await withCheckedThrowingContinuation { continuation in
-                context.evaluatePolicy(policy, localizedReason: reason) { success, error in
-                    if let error = error {
-                        continuation.resume(throwing: error)
-                        return
-                    }
-                    
-                    continuation.resume(returning: ["success": success])
+            do {
+                let success = try await self.evaluateBiometricPolicy(
+                    context: context,
+                    reason: options.promptMessage ?? "Authenticate to sign payload",
+                    policy: policy
+                )
+                
+                guard success else {
+                    response.error = "User authentication failed or was canceled"
+                    return response
+                }
+            } catch {
+                response.error = error.localizedDescription
+            }
+            
+            return response
+        }
+    }
+    
+    private func evaluateBiometricPolicy(
+        context: LAContext,
+        reason: String,
+        policy: LAPolicy
+    ) async throws -> Bool {
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Bool, Error>) in
+            context.evaluatePolicy(policy, localizedReason: reason) { success, error in
+                if let nsError = error as? NSError {
+                    let code = convertErrorCode(error: nsError)
+                    continuation.resume(throwing: GenericError(code))
+                } else {
+                    continuation.resume(returning: success)
                 }
             }
         }
+    }
+    
+    private func createSecureEnclaveKey(tag: String) -> String? {
+        let tagData = tag.data(using: .utf8)!
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassKey,
+            kSecAttrApplicationTag as String: tagData
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        
+        let attributes: [String: Any] = [
+            kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
+            kSecAttrKeySizeInBits as String: 256,
+            kSecAttrTokenID as String: kSecAttrTokenIDSecureEnclave,
+            kSecPrivateKeyAttrs as String: [
+                kSecAttrIsPermanent as String: true,
+                kSecAttrApplicationTag as String: tagData
+            ]
+        ]
+        
+        var error: Unmanaged<CFError>?
+        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
+            return nil
+        }
+        
+        guard let publicKey = SecKeyCopyPublicKey(privateKey),
+              let data = SecKeyCopyExternalRepresentation(publicKey, nil) as Data? else {
+            return nil
+        }
+        
+        return data.base64EncodedString()
+    }
+    
+    private func deleteKey(tag: String) -> Bool {
+        let tagData = tag.data(using: .utf8)!
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassKey,
+            kSecAttrApplicationTag as String: tagData
+        ]
+        let status = SecItemDelete(query as CFDictionary)
+        return status == errSecSuccess || status == errSecItemNotFound
+    }
+    
+    private func keyExists(tag: String) -> Bool {
+        let tagData = tag.data(using: .utf8)!
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassKey,
+            kSecAttrApplicationTag as String: tagData,
+            kSecReturnAttributes as String: true
+        ]
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        return status == errSecSuccess
+    }
+    
+    private func signPayload(tag: String, payload: String, context: LAContext) -> String? {
+        let tagData = tag.data(using: .utf8)!
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassKey,
+            kSecAttrApplicationTag as String: tagData,
+            kSecReturnRef as String: true
+        ]
+        
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess, let privateKey = item as! SecKey? else {
+            return nil
+        }
+        
+        guard let data = payload.data(using: .utf8) else { return nil }
+        var error: Unmanaged<CFError>?
+        guard let signature = SecKeyCreateSignature(privateKey, .ecdsaSignatureMessageX962SHA256, data as CFData, &error) as Data? else {
+            return nil
+        }
+        
+        return signature.base64EncodedString()
     }
 }
 
@@ -192,6 +298,43 @@ enum AuthenticationType: Int {
 enum SecurityLevel: Int {
     case none = 0
     case secret = 1
-    // We return any biometric as strong biometric, because there are currently no iOS devices with weak biometric options.
     case biometric = 3
+}
+
+
+func convertErrorCode(error: NSError) -> String {
+  switch error.code {
+  case LAError.systemCancel.rawValue:
+    return "system_cancel"
+  case LAError.appCancel.rawValue:
+    return "app_cancel"
+  case LAError.biometryLockout.rawValue:
+    return "lockout"
+  case LAError.userFallback.rawValue:
+    return "user_fallback"
+  case LAError.userCancel.rawValue:
+    return "user_cancel"
+  case LAError.biometryNotAvailable.rawValue:
+    return "not_available"
+  case LAError.invalidContext.rawValue:
+    return "invalid_context"
+  case LAError.biometryNotEnrolled.rawValue:
+    return "not_enrolled"
+  case LAError.passcodeNotSet.rawValue:
+    return "passcode_not_set"
+  case LAError.authenticationFailed.rawValue:
+    return "authentication_failed"
+  default:
+      return "unknown: \(error.code), \(error.localizedDescription)"
+  }
+}
+
+struct GenericError: LocalizedError {
+    let code: String
+
+    init(_ code: String) { self.code = code }
+
+    var errorDescription: String? {
+        return code
+    }
 }
