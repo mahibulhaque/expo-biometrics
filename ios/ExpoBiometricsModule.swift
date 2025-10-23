@@ -5,11 +5,11 @@ import Security
 public class ExpoBiometricsModule: Module {
     
     
-    private var defaultKeyTag: String {
+    private lazy var defaultKeyTag: String = {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.expo.biometrics"
-        let timestamp = Int(Date().timeIntervalSince1970)
-        return "\(bundleID).biometricKey.\(timestamp)"
-    }
+        return "\(bundleID).biometricKey"
+    }()
+
     
     public func definition() -> ModuleDefinition {
         Name("ExpoBiometrics")
@@ -200,12 +200,15 @@ public class ExpoBiometricsModule: Module {
                     reason: request.promptMessage ?? "Authenticate to sign payload",
                     policy: policy
                 )
+                response.success = true
                 
                 guard success else {
+                    response.success = false
                     response.error = "User authentication failed or was canceled"
                     return response
                 }
             } catch {
+                response.success = false
                 response.error = error.localizedDescription
             }
             
@@ -232,11 +235,21 @@ public class ExpoBiometricsModule: Module {
     
     private func createSecureEnclaveKey(tag: String) -> String? {
         let tagData = tag.data(using: .utf8)!
+        
         let deleteQuery: [String: Any] = [
             kSecClass as String: kSecClassKey,
             kSecAttrApplicationTag as String: tagData
         ]
         SecItemDelete(deleteQuery as CFDictionary)
+        
+        guard let access = SecAccessControlCreateWithFlags(
+            nil,
+            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            [.privateKeyUsage, .biometryAny],
+            nil
+        ) else {
+            return nil
+        }
         
         let attributes: [String: Any] = [
             kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
@@ -244,7 +257,8 @@ public class ExpoBiometricsModule: Module {
             kSecAttrTokenID as String: kSecAttrTokenIDSecureEnclave,
             kSecPrivateKeyAttrs as String: [
                 kSecAttrIsPermanent as String: true,
-                kSecAttrApplicationTag as String: tagData
+                kSecAttrApplicationTag as String: tagData,
+                kSecAttrAccessControl as String: access
             ]
         ]
         
@@ -257,7 +271,6 @@ public class ExpoBiometricsModule: Module {
               let data = SecKeyCopyExternalRepresentation(publicKey, nil) as Data? else {
             return nil
         }
-        
         return data.base64EncodedString()
     }
     

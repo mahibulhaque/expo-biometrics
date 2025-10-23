@@ -136,6 +136,7 @@ export type SimplePromptResponse = {
 	 * the warning message is set (NSFaceIDUsageDescription is not configured) then we can't use authentication with biometrics
 	 * @platform ios
 	 */
+	warning?: string;
 };
 
 export type CreateKeysResponse = {
