@@ -11,8 +11,6 @@ jobs:
       runs-on: ubuntu-latest
       permissions:
          contents: write
-         issues: read
-         pull-requests: read
 
       steps:
          - name: Checkout repository
@@ -35,4 +33,5 @@ jobs:
          - name: Release
            env:
               NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+              GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
            run: npx semantic-release
