@@ -103,19 +103,19 @@ public class ExpoBiometricsModule: Module {
         
         
         
-        AsyncFunction("createSignatureAsync") { (options: CreateSignatureRequest) async -> CreateSignatureResponse in
+        AsyncFunction("createSignatureAsync") { (request: CreateSignatureRequest) async -> CreateSignatureResponse in
             var response = CreateSignatureResponse()
             let context = LAContext()
             
-            context.localizedCancelTitle = options.cancelLabel
-            context.localizedFallbackTitle = options.fallbackLabel
+            context.localizedCancelTitle = request.cancelLabel
+            context.localizedFallbackTitle = request.fallbackLabel
             
             let policy = LAPolicy.deviceOwnerAuthenticationWithBiometrics
             
             do {
                 let success = try await self.evaluateBiometricPolicy(
                     context: context,
-                    reason: options.promptMessage ?? "Authenticate to sign payload",
+                    reason: request.promptMessage ?? "Authenticate to sign payload",
                     policy: policy
                 )
                 
@@ -124,7 +124,7 @@ public class ExpoBiometricsModule: Module {
                     return response
                 }
                 
-                if let signature = self.signPayload(tag: self.defaultKeyTag, payload: options.payload, context: context) {
+                if let signature = self.signPayload(tag: self.defaultKeyTag, payload: request.payload, context: context) {
                     response.signature = signature
                     response.success = true
                 } else {
@@ -138,13 +138,13 @@ public class ExpoBiometricsModule: Module {
         }
         
         
-        AsyncFunction("simplePromptAsync") { (options:SimplePromptRequest) async -> SimplePromptResponse in
+        AsyncFunction("simplePromptAsync") { (request:SimplePromptRequest) async -> SimplePromptResponse in
             let context = LAContext()
             let response = SimplePromptResponse()
             
-            let reason = options.promptMessage ?? ""
-            let cancelLabel = options.cancelLabel
-            let fallbackLabel = options.fallbackLabel
+            let reason = request.promptMessage ?? ""
+            let cancelLabel = request.cancelLabel
+            let fallbackLabel = request.fallbackLabel
             
             
             if fallbackLabel != nil {
@@ -160,7 +160,7 @@ public class ExpoBiometricsModule: Module {
             do {
                 let success = try await self.evaluateBiometricPolicy(
                     context: context,
-                    reason: options.promptMessage ?? "Authenticate to sign payload",
+                    reason: request.promptMessage ?? "Authenticate to sign payload",
                     policy: policy
                 )
                 
