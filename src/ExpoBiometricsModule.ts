@@ -15,7 +15,7 @@ declare class ExpoBiometricsModule extends NativeModule {
 	isEnrolledAsync(): Promise<boolean>;
 	getEnrolledLevelAsync(): Promise<SecurityLevel>;
 	createKeysAsync(): Promise<CreateKeysResponse>;
-	deleteKeys(): Promise<boolean>;
+	deleteKeysAsync(): Promise<boolean>;
 	doesKeyExistAsync(): Promise<boolean>;
 	createSignatureAsync(
 		request: CreateSignatureRequest,
