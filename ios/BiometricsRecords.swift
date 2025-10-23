@@ -13,6 +13,7 @@ struct CreateSignatureResponse:Record{
     @Field var signature:String
     @Field var success:Bool = false
     @Field var error:String?
+    @Field var warning:String?
 }
 
 struct CreateKeysResponse:Record{
@@ -30,4 +31,5 @@ struct SimplePromptRequest:Record{
 struct SimplePromptResponse:Record{
     @Field var success:Bool = false
     @Field var error:String?
+    @Field var warning:String?
 }

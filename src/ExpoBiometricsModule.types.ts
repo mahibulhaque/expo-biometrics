@@ -120,6 +120,11 @@ export type CreateSignatureResponse = {
 	signature: string;
 	success: boolean;
 	error?: string;
+	/**
+	 * the warning message is set (NSFaceIDUsageDescription is not configured) then we can't use authentication with biometrics
+	 * @platform ios
+	 */
+	warning?: string;
 };
 
 export type SimplePromptRequest = BiometricAuthenticationOptions & {};
@@ -127,6 +132,10 @@ export type SimplePromptRequest = BiometricAuthenticationOptions & {};
 export type SimplePromptResponse = {
 	success: boolean;
 	error?: string;
+	/**
+	 * the warning message is set (NSFaceIDUsageDescription is not configured) then we can't use authentication with biometrics
+	 * @platform ios
+	 */
 };
 
 export type CreateKeysResponse = {

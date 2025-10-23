@@ -105,12 +105,31 @@ public class ExpoBiometricsModule: Module {
         
         AsyncFunction("createSignatureAsync") { (request: CreateSignatureRequest) async -> CreateSignatureResponse in
             var response = CreateSignatureResponse()
+            var warningMessage:String?
             let context = LAContext()
             
             context.localizedCancelTitle = request.cancelLabel
             context.localizedFallbackTitle = request.fallbackLabel
             
+            if isFaceIdDevice() {
+                let usageDescription = Bundle.main.object(forInfoDictionaryKey: "NSFaceIDUsageDescription")
+                
+                if usageDescription == nil {
+                    warningMessage = "FaceID is available but has not been configured. To enable FaceID, provide `NSFaceIDUsageDescription`."
+                }
+            }
+            
+            
             let policy = LAPolicy.deviceOwnerAuthenticationWithBiometrics
+            
+            if warningMessage != nil {
+                // If the warning message is set (NSFaceIDUsageDescription is not configured) then we can't use
+                // authentication with biometrics — it would crash, so let's just resolve with no success.
+                // We could reject, but we already resolve even if there are any errors, so sadly we would need to introduce a breaking change.
+                response.success = false
+                response.warning = warningMessage
+                return response
+            }
             
             do {
                 let success = try await self.evaluateBiometricPolicy(
@@ -139,6 +158,7 @@ public class ExpoBiometricsModule: Module {
         
         
         AsyncFunction("simplePromptAsync") { (request:SimplePromptRequest) async -> SimplePromptResponse in
+            var warningMessage:String?
             let context = LAContext()
             let response = SimplePromptResponse()
             
@@ -153,6 +173,23 @@ public class ExpoBiometricsModule: Module {
             
             if cancelLabel != nil {
                 context.localizedCancelTitle = cancelLabel
+            }
+            
+            if isFaceIdDevice() {
+                let usageDescription = Bundle.main.object(forInfoDictionaryKey: "NSFaceIDUsageDescription")
+                
+                if usageDescription == nil {
+                    warningMessage = "FaceID is available but has not been configured. To enable FaceID, provide `NSFaceIDUsageDescription`."
+                }
+            }
+            
+            if warningMessage != nil {
+                // If the warning message is set (NSFaceIDUsageDescription is not configured) then we can't use
+                // authentication with biometrics — it would crash, so let's just resolve with no success.
+                // We could reject, but we already resolve even if there are any errors, so sadly we would need to introduce a breaking change.
+                response.success = false
+                response.warning = warningMessage
+                return response
             }
             
             let policy = LAPolicy.deviceOwnerAuthenticationWithBiometrics
@@ -303,37 +340,37 @@ enum SecurityLevel: Int {
 
 
 func convertErrorCode(error: NSError) -> String {
-  switch error.code {
-  case LAError.systemCancel.rawValue:
-    return "system_cancel"
-  case LAError.appCancel.rawValue:
-    return "app_cancel"
-  case LAError.biometryLockout.rawValue:
-    return "lockout"
-  case LAError.userFallback.rawValue:
-    return "user_fallback"
-  case LAError.userCancel.rawValue:
-    return "user_cancel"
-  case LAError.biometryNotAvailable.rawValue:
-    return "not_available"
-  case LAError.invalidContext.rawValue:
-    return "invalid_context"
-  case LAError.biometryNotEnrolled.rawValue:
-    return "not_enrolled"
-  case LAError.passcodeNotSet.rawValue:
-    return "passcode_not_set"
-  case LAError.authenticationFailed.rawValue:
-    return "authentication_failed"
-  default:
-      return "unknown: \(error.code), \(error.localizedDescription)"
-  }
+    switch error.code {
+    case LAError.systemCancel.rawValue:
+        return "system_cancel"
+    case LAError.appCancel.rawValue:
+        return "app_cancel"
+    case LAError.biometryLockout.rawValue:
+        return "lockout"
+    case LAError.userFallback.rawValue:
+        return "user_fallback"
+    case LAError.userCancel.rawValue:
+        return "user_cancel"
+    case LAError.biometryNotAvailable.rawValue:
+        return "not_available"
+    case LAError.invalidContext.rawValue:
+        return "invalid_context"
+    case LAError.biometryNotEnrolled.rawValue:
+        return "not_enrolled"
+    case LAError.passcodeNotSet.rawValue:
+        return "passcode_not_set"
+    case LAError.authenticationFailed.rawValue:
+        return "authentication_failed"
+    default:
+        return "unknown: \(error.code), \(error.localizedDescription)"
+    }
 }
 
 struct GenericError: LocalizedError {
     let code: String
-
+    
     init(_ code: String) { self.code = code }
-
+    
     var errorDescription: String? {
         return code
     }

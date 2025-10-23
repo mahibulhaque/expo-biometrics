@@ -15,7 +15,10 @@
 		},
 		"ios": {
 			"supportsTablet": true,
-			"bundleIdentifier": "expo.modules.biometrics.example"
+			"bundleIdentifier": "expo.modules.biometrics.example",
+			"infoPlist": {
+				"NSFaceIDUsageDescription": "This app uses face id to perform authentication"
+			}
 		},
 		"android": {
 			"adaptiveIcon": {
