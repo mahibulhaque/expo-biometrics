@@ -1,43 +1,57 @@
 {
-  "name": "expo-biometrics",
-  "version": "0.1.0",
-  "description": "Expo Biometrics is a library which allows native iOS and Android keystore management. It allows you to create public private key pairs that are stored in native keystores and protected by biometric authentication. Those keys can then be retrieved later, after proper authentication, and used to create a cryptographic signature.",
-  "main": "build/index.js",
-  "types": "build/index.d.ts",
-  "scripts": {
-    "build": "expo-module build",
-    "clean": "expo-module clean",
-    "lint": "expo-module lint",
-    "test": "expo-module test",
-    "prepare": "expo-module prepare",
-    "prepublishOnly": "expo-module prepublishOnly",
-    "expo-module": "expo-module",
-    "open:ios": "xed example/ios",
-    "open:android": "open -a \"Android Studio\" example/android"
-  },
-  "keywords": [
-    "react-native",
-    "expo",
-    "expo-biometrics",
-    "ExpoBiometrics"
-  ],
-  "repository": "https://github.com/mahibulhaque/expo-biometrics",
-  "bugs": {
-    "url": "https://github.com/mahibulhaque/expo-biometrics/issues"
-  },
-  "author": "mahibulhaque <mahibulhaque2000@gmail.com> (mahibulhaque)",
-  "license": "MIT",
-  "homepage": "https://github.com/mahibulhaque/expo-biometrics#readme",
-  "devDependencies": {
-    "@types/invariant": "^2.2.37",
-    "@types/react": "~19.1.0",
-    "expo": "^54.0.10",
-    "expo-module-scripts": "^5.0.7",
-    "react-native": "0.81.4"
-  },
-  "peerDependencies": {
-    "expo": "*",
-    "react": "*",
-    "react-native": "*"
-  }
+	"name": "expo-biometrics",
+	"version": "1.0.0",
+	"description": "Expo module providing biometric functionality for signing and encryption",
+	"main": "build/index.js",
+	"types": "build/index.d.ts",
+	"scripts": {
+		"build": "expo-module build",
+		"clean": "expo-module clean",
+		"lint": "expo-module lint",
+		"test": "expo-module test",
+		"prepare": "husky",
+		"prepublishOnly": "expo-module prepublishOnly",
+		"expo-module": "expo-module",
+		"open:ios": "xed example/ios",
+		"open:android": "open -a \"Android Studio\" example/android"
+	},
+	"keywords": [
+		"react-native",
+		"expo",
+		"expo-biometrics",
+		"biometrics",
+		"authentication",
+		"faceid",
+		"touchid"
+	],
+	"repository": "https://github.com/mahibulhaque/expo-biometrics",
+	"bugs": {
+		"url": "https://github.com/mahibulhaque/expo-biometrics/issues"
+	},
+	"author": "Md Mahibul Haque",
+	"license": "MIT",
+	"homepage": "https://github.com/mahibulhaque/expo-biometrics#readme",
+	"publishConfig": {
+		"access": "public"
+	},
+	"devDependencies": {
+		"@commitlint/cli": "^20.1.0",
+		"@commitlint/config-conventional": "^20.0.0",
+		"@semantic-release/changelog": "^6.0.3",
+		"@semantic-release/git": "^10.0.1",
+		"@semantic-release/github": "^12.0.0",
+		"@semantic-release/npm": "^13.1.1",
+		"@types/invariant": "^2.2.37",
+		"@types/react": "~19.1.0",
+		"expo": "^54.0.10",
+		"expo-module-scripts": "^5.0.7",
+		"husky": "^9.1.7",
+		"react-native": "0.81.4",
+		"semantic-release": "^25.0.1"
+	},
+	"peerDependencies": {
+		"expo": "*",
+		"react": "*",
+		"react-native": "*"
+	}
 }
