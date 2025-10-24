@@ -27,6 +27,9 @@ internal class CreateSignatureRequest : Record {
 
     @Field
     val requireConfirmation: Boolean = true
+
+    @Field
+    val keyAlias:String?=null
 }
 
 internal class CreateSignatureResponse : Record {
