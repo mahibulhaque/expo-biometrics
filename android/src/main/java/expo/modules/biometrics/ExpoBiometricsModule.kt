@@ -263,7 +263,10 @@ class ExpoBiometricsModule : Module() {
             keyStore.load(null)
             val result = keyStore.containsAlias(keyAlias)
 
-            promise.resolve(result)
+            val response = mapOf(
+                            "keyExists" to result,
+                        )
+            promise.resolve(response)
             return@AsyncFunction
         }
 
