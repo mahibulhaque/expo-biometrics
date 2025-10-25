@@ -97,10 +97,10 @@ class ExpoBiometricsModule : Module() {
             return@AsyncFunction level
         }
 
-        AsyncFunction("createKeysAsync") { keyAlias:String?, keyType:String?, promise:Promise ->
-            val actualKeyAlias = getKeyAlias(keyAlias)
-            val actualKeyType = keyType?.lowercase() ?: "rsa2048"
-            debugLog("createKeys called with keyAlias: ${keyAlias ?: "default"}, using: $actualKeyAlias, keyType: $actualKeyType")
+        AsyncFunction("createKeysAsync") { request: CreateKeysRequest, promise: Promise ->
+            val actualKeyAlias = getKeyAlias(request.keyAlias)
+            val actualKeyType = request.keyType?.lowercase() ?: "rsa2048"
+            debugLog("createKeys called with keyAlias: ${request.keyAlias ?: "default"}, using: $actualKeyAlias, keyType: $actualKeyType")
 
 
             try {
@@ -116,7 +116,10 @@ class ExpoBiometricsModule : Module() {
                 // Generate new key pair based on key type
                 when (actualKeyType) {
                     "rsa2048" -> {
-                        val keyPairGenerator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore")
+                        val keyPairGenerator = KeyPairGenerator.getInstance(
+                            KeyProperties.KEY_ALGORITHM_RSA,
+                            "AndroidKeyStore"
+                        )
                         val keyGenParameterSpec = KeyGenParameterSpec.Builder(
                             actualKeyAlias,
                             KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
@@ -146,7 +149,10 @@ class ExpoBiometricsModule : Module() {
                     }
 
                     "ec256" -> {
-                        val keyPairGenerator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore")
+                        val keyPairGenerator = KeyPairGenerator.getInstance(
+                            KeyProperties.KEY_ALGORITHM_EC,
+                            "AndroidKeyStore"
+                        )
                         val keyGenParameterSpec = KeyGenParameterSpec.Builder(
                             actualKeyAlias,
                             KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
@@ -178,7 +184,11 @@ class ExpoBiometricsModule : Module() {
 
                     else -> {
                         debugLog("createKeys failed - Unsupported key type: $actualKeyType")
-                        promise.reject("CREATE_KEYS_ERROR", "Unsupported key type: $actualKeyType. Supported types: rsa2048, ec256", null)
+                        promise.reject(
+                            "CREATE_KEYS_ERROR",
+                            "Unsupported key type: $actualKeyType. Supported types: rsa2048, ec256",
+                            null
+                        )
                     }
                 }
 
@@ -206,9 +216,9 @@ class ExpoBiometricsModule : Module() {
             }
         }
 
-        AsyncFunction("deleteKeysAsync") { keyAlias: String?, promise:Promise ->
-            val actualKeyAlias = getKeyAlias(keyAlias)
-            debugLog("deleteKeys called with keyAlias: ${keyAlias ?: "default"}, using: $actualKeyAlias")
+        AsyncFunction("deleteKeysAsync") { request: DeleteKeysRequest, promise: Promise ->
+            val actualKeyAlias = getKeyAlias(request.keyAlias)
+            debugLog("deleteKeys called with keyAlias: ${request.keyAlias ?: "default"}, using: $actualKeyAlias")
             try {
 
                 // Access the Android KeyStore
@@ -231,7 +241,11 @@ class ExpoBiometricsModule : Module() {
                         return@AsyncFunction
                     } else {
                         debugLog("deleteKeys failed - Key still exists after deletion attempt")
-                        promise.reject("DELETE_KEYS_ERROR", "Key deletion verification failed", null)
+                        promise.reject(
+                            "DELETE_KEYS_ERROR",
+                            "Key deletion verification failed",
+                            null
+                        )
                     }
                 } else {
                     // Key doesn't exist, but this is not necessarily an error
@@ -258,14 +272,14 @@ class ExpoBiometricsModule : Module() {
             }
         }
 
-        AsyncFunction("doesKeyExistAsync") { keyAlias: String?, promise: Promise ->
+        AsyncFunction("doesKeyExistAsync") { request: DoesKeysExistRequest, promise: Promise ->
             val keyStore = KeyStore.getInstance("AndroidKeyStore")
             keyStore.load(null)
-            val result = keyStore.containsAlias(keyAlias)
+            val result = keyStore.containsAlias(request.keyAlias)
 
             val response = mapOf(
-                            "keyExists" to result,
-                        )
+                "keyExists" to result,
+            )
             promise.resolve(response)
             return@AsyncFunction
         }
@@ -331,9 +345,9 @@ class ExpoBiometricsModule : Module() {
                                 try {
                                     signature.update(request.payload.toByteArray())
                                     val signedData = signature.sign()
-                                    val base64Signature = android.util.Base64.encodeToString(
+                                    val base64Signature = Base64.encodeToString(
                                         signedData,
-                                        android.util.Base64.NO_WRAP
+                                        Base64.NO_WRAP
                                     )
                                     response.success = true
                                     response.signature = base64Signature
@@ -412,7 +426,10 @@ class ExpoBiometricsModule : Module() {
                             promise.resolve(mapOf("success" to true))
                         }
 
-                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        override fun onAuthenticationError(
+                            errorCode: Int,
+                            errString: CharSequence
+                        ) {
                             super.onAuthenticationError(errorCode, errString)
                             val errorType = convertError(errorCode)
                             if (errorType == "user_cancel") {
@@ -446,7 +463,8 @@ class ExpoBiometricsModule : Module() {
     }
 
     private fun isDebugModeEnabled(): Boolean {
-        val sharedPrefs = context.getSharedPreferences("ReactNativeBiometrics", Context.MODE_PRIVATE)
+        val sharedPrefs =
+            context.getSharedPreferences("ReactNativeBiometrics", Context.MODE_PRIVATE)
         return sharedPrefs.getBoolean("debugMode", false)
     }
 
