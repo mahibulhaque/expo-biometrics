@@ -1,6 +1,6 @@
 {
 	"name": "expo-biometrics",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Expo module providing biometric functionality for signing and encryption",
 	"main": "build/index.js",
 	"types": "build/index.d.ts",

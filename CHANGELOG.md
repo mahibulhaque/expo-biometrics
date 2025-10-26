@@ -1,3 +1,13 @@
+## [1.0.1](https://github.com/mahibulhaque/expo-biometrics/compare/v1.0.0...v1.0.1) (2025-10-26)
+
+
+### Bug Fixes
+
+* android methods ([3633e2a](https://github.com/mahibulhaque/expo-biometrics/commit/3633e2a8ccdb4ba256ddf8b99346fb268befaded))
+* argument type in android ([12056c0](https://github.com/mahibulhaque/expo-biometrics/commit/12056c0e48a69149ee66e0c1c70e27a72e83c08f))
+* example app to show  authentication status ([51483fa](https://github.com/mahibulhaque/expo-biometrics/commit/51483fa9f621f181027fb78cc7cb8cace8dd9749))
+* ios code for expo biometrics module ([4a3ea51](https://github.com/mahibulhaque/expo-biometrics/commit/4a3ea51b1b26f7b121f165d1954ab61b40b18b7d))
+
 # 1.0.0 (2025-10-23)
 
 
