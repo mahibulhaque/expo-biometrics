@@ -160,6 +160,16 @@ export default function Home() {
 				)}
 
 				{/* Status Display */}
+				<View
+					style={[
+						styles.statusContainer,
+						status.type === 'success' && styles.successBox,
+						status.type === 'error' && styles.errorBox,
+						status.type === 'warning' && styles.warningBox,
+					]}
+				>
+					<Text style={styles.statusText}>{status.message}</Text>
+				</View>
 			</View>
 		</ScrollView>
 	);
