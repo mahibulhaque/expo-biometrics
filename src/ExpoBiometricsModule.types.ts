@@ -114,6 +114,7 @@ export type CreateSignatureRequest = BiometricAuthenticationOptions & {
 	 * `Payload` property is required in order to generate the encrypted signature.
 	 */
 	payload: string;
+	keyAlias?: string;
 };
 
 export type CreateSignatureResponse = {
@@ -163,3 +164,8 @@ export type BiometricAuthenticationError =
 	| 'invalid_context'
 	| 'passcode_not_set'
 	| 'authentication_failed';
+
+export enum BiometricKeyType {
+	RSA2048 = 'rsa2048',
+	EC256 = 'ec256',
+}

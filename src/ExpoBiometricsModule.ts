@@ -1,6 +1,7 @@
 import { NativeModule, requireNativeModule } from 'expo';
 import {
 	AuthenticationType,
+	BiometricKeyType,
 	CreateKeysResponse,
 	CreateSignatureRequest,
 	CreateSignatureResponse,
@@ -14,9 +15,16 @@ declare class ExpoBiometricsModule extends NativeModule {
 	supportedAuthenticationTypesAsync(): Promise<AuthenticationType[]>;
 	isEnrolledAsync(): Promise<boolean>;
 	getEnrolledLevelAsync(): Promise<SecurityLevel>;
-	createKeysAsync(): Promise<CreateKeysResponse>;
-	deleteKeysAsync(): Promise<boolean>;
-	doesKeyExistAsync(): Promise<boolean>;
+	createKeysAsync(request: {
+		keyAlias?: string;
+		keyType?: BiometricKeyType;
+	}): Promise<CreateKeysResponse>;
+	deleteKeysAsync(request: {
+		keyAlias?: string;
+	}): Promise<{ success: boolean }>;
+	doesKeyExistAsync(request: {
+		keyAlias?: string;
+	}): Promise<{ keyExists: boolean }>;
 	createSignatureAsync(
 		request: CreateSignatureRequest,
 	): Promise<CreateSignatureResponse>;

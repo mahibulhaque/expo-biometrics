@@ -37,7 +37,7 @@ export default function Home() {
 			onPress: async () => {
 				setLoading(true);
 				try {
-					const res = await ExpoBiometrics.createKeysAsync();
+					const res = await ExpoBiometrics.createKeysAsync({});
 					if (res.success) {
 						showStatus('success', '✅ Keys created successfully.');
 					} else {
@@ -160,16 +160,6 @@ export default function Home() {
 				)}
 
 				{/* Status Display */}
-				<View
-					style={[
-						styles.statusContainer,
-						status.type === 'success' && styles.successBox,
-						status.type === 'error' && styles.errorBox,
-						status.type === 'warning' && styles.warningBox,
-					]}
-				>
-					<Text style={styles.statusText}>{status.message}</Text>
-				</View>
 			</View>
 		</ScrollView>
 	);
