@@ -1,7 +1,38 @@
-import { ScrollView, View, Text, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import ThemedText from "../components/ThemedText";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { RootStackParamList } from "../navigators/RootNavigator";
+import { HomeTabsParamsList } from "../navigators/HomeTabNavigator";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-export default function HomeScreen() {
+type Example = {
+  title: string;
+  description: string;
+  route: keyof RootStackParamList;
+};
+
+const examples: Example[] = [
+  {
+    title: "Simple Prompt",
+    description: "Method to prompt user for biometric authenticaion",
+    route: "simple-prompt",
+  },
+  {
+    title: "Create Keys",
+    description: "Private and Public keypair generation method",
+    route: "create-keys",
+  },
+  {
+    title: "Create Signature",
+    description: "Encrypted payload creation method using private key",
+    route: "create-signature",
+  },
+];
+
+export default function Home() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
@@ -9,8 +40,27 @@ export default function HomeScreen() {
     >
       <View style={styles.content}>
         <ThemedText size="header" style={styles.title}>
-          Expo Biometrics Examples
+          Examples
         </ThemedText>
+
+        {examples.map((example, index) => (
+          <Pressable
+            key={example.route}
+            style={({ pressed }) => [
+              styles.card,
+              pressed && styles.cardPressed,
+              index === examples.length - 1 && styles.lastCard,
+            ]}
+            onPress={() => {
+              navigation.push(example.route);
+            }}
+          >
+            <ThemedText style={styles.cardTitle}>{example.title}</ThemedText>
+            <ThemedText size="caption" style={styles.cardDescription}>
+              {example.description}
+            </ThemedText>
+          </Pressable>
+        ))}
       </View>
     </ScrollView>
   );
@@ -24,62 +74,25 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    opacity: 0.6,
-    marginBottom: 16,
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 12,
+  card: {
+    paddingVertical: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "rgba(128, 128, 128, 0.2)",
   },
-  label: {
-    opacity: 0.8,
-  },
-  value: {
-    fontWeight: "500",
-  },
-  voiceList: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  voiceItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderRadius: 8,
-    minWidth: 120,
-    alignItems: "center",
-  },
-  voiceText: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 2,
-  },
-  voiceLanguage: {
-    opacity: 0.6,
-  },
-  voiceHint: {
-    opacity: 0.5,
-    marginTop: 12,
-  },
-  pressed: {
+  cardPressed: {
     opacity: 0.7,
   },
-  banner: {
-    marginTop: 40,
-    paddingVertical: 20,
-    alignItems: "center",
+  lastCard: {
+    borderBottomWidth: 0,
   },
-  bannerText: {
-    opacity: 0.4,
-    fontWeight: "bold",
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  cardDescription: {
+    opacity: 0.6,
   },
 });

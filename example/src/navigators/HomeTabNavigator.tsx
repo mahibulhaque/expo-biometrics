@@ -3,7 +3,12 @@ import HomeScreen from "../screens/HomeScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import { Ionicons } from "@expo/vector-icons";
 
-const Tab = createBottomTabNavigator();
+export type HomeTabsParamsList = {
+  home: undefined;
+  settings: undefined;
+};
+
+const Tab = createBottomTabNavigator<HomeTabsParamsList>();
 
 export default function HomeTabs() {
   return (
@@ -15,10 +20,11 @@ export default function HomeTabs() {
         name="home"
         component={HomeScreen}
         options={{
+          title: "Features",
           tabBarIcon: ({ focused, color, size }) => {
             return (
               <Ionicons
-                name={focused ? "home" : "home-outline"}
+                name={focused ? "sparkles" : "sparkles-outline"}
                 size={size}
                 color={color}
               />
@@ -30,6 +36,7 @@ export default function HomeTabs() {
         name="settings"
         component={SettingsScreen}
         options={{
+          title: "Settings",
           tabBarIcon: ({ focused, color, size }) => {
             return (
               <Ionicons
