@@ -1,9 +1,10 @@
 import { useNavigation } from "@react-navigation/native";
-import ThemedText from "../components/ThemedText";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import ThemedText from "../components/ui/ThemedText";
+import { Pressable, ScrollView, View } from "react-native";
+import { StyleSheet, UnistylesRuntime } from "react-native-unistyles";
 import { RootStackParamList } from "../navigators/RootNavigator";
-import { HomeTabsParamsList } from "../navigators/HomeTabNavigator";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Button } from "react-native";
 
 type Example = {
   title: string;
@@ -39,7 +40,7 @@ export default function Home() {
       style={styles.container}
     >
       <View style={styles.content}>
-        <ThemedText size="header" style={styles.title}>
+        <ThemedText type="title" style={styles.title}>
           Examples
         </ThemedText>
 
@@ -56,7 +57,7 @@ export default function Home() {
             }}
           >
             <ThemedText style={styles.cardTitle}>{example.title}</ThemedText>
-            <ThemedText size="caption" style={styles.cardDescription}>
+            <ThemedText type="subtitle" style={styles.cardDescription}>
               {example.description}
             </ThemedText>
           </Pressable>

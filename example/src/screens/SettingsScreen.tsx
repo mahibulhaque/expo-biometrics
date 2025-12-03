@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import ThemedText from "../components/ThemedText";
+import { View } from "react-native";
+import { StyleSheet } from "react-native-unistyles";
+import ThemedText from "../components/ui/ThemedText";
 import ExpoBiometrics, {
   AuthenticationType,
   SecurityLevel,
 } from "expo-biometrics";
+import { ThemedView } from "../components/ui/ThemedView";
 
 export default function SettingsScreen() {
   const [isBiometricEnrolledInDevice, setIsBiometricEnrolledInDevice] =
@@ -69,6 +71,7 @@ export default function SettingsScreen() {
   };
 
   const getEnrollmentLevel = () => {
+    console.log(biometricSecurityLevel);
     switch (Number(biometricSecurityLevel.toFixed())) {
       case SecurityLevel.BIOMETRIC_STRONG:
         return "Strong";
@@ -84,68 +87,78 @@ export default function SettingsScreen() {
   useEffect(() => {
     checkHasHardware();
     checkIsBiometricEnrolled();
+    checkSecurityLevel();
     checkSupportedAuthenticationType();
   }, []);
 
   return (
-    <ScrollView
-      contentInsetAdjustmentBehavior="automatic"
-      style={styles.container}
-    >
+    <ThemedView style={styles.container}>
       <View style={styles.content}>
-        <ThemedText size="header" style={styles.title}>
+        <ThemedText type="title" style={[styles.title]}>
           Settings
         </ThemedText>
 
         <View style={styles.section}>
-          <ThemedText size="caption" style={styles.sectionTitle}>
+          <ThemedText type="sectionTitle" style={[styles.sectionTitle]}>
             BIOMETRIC STATUS
           </ThemedText>
           <View style={styles.row}>
-            <ThemedText style={styles.label}>Available</ThemedText>
-            <ThemedText style={styles.value}>
+            <ThemedText type="subtitle" style={[styles.label]}>
+              Available
+            </ThemedText>
+            <ThemedText type="subtitle" style={[styles.value]}>
               {hasHardware ? "Yes" : "No"}
             </ThemedText>
           </View>
 
           <View style={styles.row}>
-            <ThemedText style={styles.label}>Authentication Type</ThemedText>
-            <ThemedText style={styles.value}>
+            <ThemedText type="subtitle" style={[styles.label]}>
+              Authentication Type
+            </ThemedText>
+            <ThemedText type="subtitle" style={[styles.value]}>
               {getAuthenticationType()}
             </ThemedText>
           </View>
         </View>
 
         <View style={styles.section}>
-          <ThemedText size="caption" style={styles.sectionTitle}>
+          <ThemedText type="sectionTitle" style={[styles.sectionTitle]}>
             ENROLLMENT STATUS
           </ThemedText>
           <View style={styles.row}>
-            <ThemedText style={styles.label}>Biometric Enrolled</ThemedText>
-            <ThemedText style={styles.value}>
+            <ThemedText type="subtitle" style={[styles.label]}>
+              Biometric Enrolled
+            </ThemedText>
+            <ThemedText type="subtitle" style={[styles.value]}>
               {isBiometricEnrolledInDevice ? "Yes" : "No"}
             </ThemedText>
           </View>
 
           <View style={styles.row}>
-            <ThemedText style={styles.label}>Enrollment Level</ThemedText>
-            <ThemedText style={styles.value}>{getEnrollmentLevel()}</ThemedText>
+            <ThemedText type="subtitle" style={[styles.label]}>
+              Enrollment Level
+            </ThemedText>
+            <ThemedText type="subtitle" style={[styles.value]}>
+              {getEnrollmentLevel()}
+            </ThemedText>
           </View>
         </View>
 
         <View style={styles.banner}>
-          <ThemedText size="caption" style={styles.bannerText}>
-            Powered by Expo Modules
-          </ThemedText>
+          <ThemedText type="subtitle">Powered by Expo Modules</ThemedText>
         </View>
       </View>
-    </ScrollView>
+    </ThemedView>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create((_theme, rt) => ({
   container: {
     flex: 1,
+    paddingTop: rt.insets.top,
+    paddingBottom: rt.insets.bottom,
+    paddingLeft: rt.insets.left,
+    paddingRight: rt.insets.right,
   },
   content: {
     padding: 20,
@@ -173,33 +186,6 @@ const styles = StyleSheet.create({
   value: {
     fontWeight: "500",
   },
-  voiceList: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  voiceItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderRadius: 8,
-    minWidth: 120,
-    alignItems: "center",
-  },
-  voiceText: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 2,
-  },
-  voiceLanguage: {
-    opacity: 0.6,
-  },
-  voiceHint: {
-    opacity: 0.5,
-    marginTop: 12,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
   banner: {
     marginTop: 40,
     paddingVertical: 20,
@@ -209,4 +195,4 @@ const styles = StyleSheet.create({
     opacity: 0.4,
     fontWeight: "bold",
   },
-});
+}));

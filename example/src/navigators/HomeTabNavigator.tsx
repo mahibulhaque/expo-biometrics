@@ -2,6 +2,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomeScreen from "../screens/HomeScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import { Ionicons } from "@expo/vector-icons";
+import { useUnistyles } from "react-native-unistyles";
 
 export type HomeTabsParamsList = {
   home: undefined;
@@ -11,10 +12,21 @@ export type HomeTabsParamsList = {
 const Tab = createBottomTabNavigator<HomeTabsParamsList>();
 
 export default function HomeTabs() {
+  const { theme } = useUnistyles();
   return (
     <Tab.Navigator
       initialRouteName="home"
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        tabBarInactiveTintColor: theme.colors.tint,
+        tabBarActiveTintColor: theme.colors.activeTint,
+        sceneStyle: {
+          backgroundColor: theme.colors.background,
+        },
+        tabBarStyle: {
+          backgroundColor: theme.colors.foreground,
+        },
+      }}
     >
       <Tab.Screen
         name="home"
