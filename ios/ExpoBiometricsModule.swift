@@ -76,6 +76,105 @@ public class ExpoBiometricsModule: Module {
             return supportedAuthenticationTypes
         }
         
+        AsyncFunction("configureKeyAlias"){(keyAlias:String, promise:Promise) in
+            // Validate key alias
+            let aliasString = keyAlias as String
+            if aliasString.isEmpty {
+                handleError(BiometricsError.emptyKeyAlias, promise: promise)
+                return
+            }
+            // Store the configured key alias
+            configuredKeyAlias = aliasString
+            UserDefaults.standard.set(aliasString, forKey: "ReactNativeBiometricsKeyAlias")
+            
+            promise.resolve(nil)
+        }
+        
+        AsyncFunction("getDefaultKeyAlias"){(keyAlias:String, promise:Promise) in
+            let defaultAlias = getKeyAlias()
+            promise.resolve(defaultAlias)
+        }
+        
+        AsyncFunction("getAllKeys"){(_ customAlias: String, promise:Promise) in
+            
+            // Query to find all keys in the Keychain
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassKey,
+                kSecMatchLimit as String: kSecMatchLimitAll,
+                kSecReturnAttributes as String: true,
+                kSecReturnRef as String: true
+            ]
+            
+            var result: CFTypeRef?
+            let status = SecItemCopyMatching(query as CFDictionary, &result)
+            
+            switch status {
+            case errSecSuccess:
+                guard let items = result as? [[String: Any]] else {
+                    handleError(.keychainQueryFailed, promise:promise)
+                    return
+                }
+                
+                var keysList: [[String: Any]] = []
+                
+                for item in items {
+                    // Filter for our biometric keys
+                    if let keyTag = item[kSecAttrApplicationTag as String] as? Data,
+                       let keyTagString = String(data: keyTag, encoding: .utf8) {
+                        
+                        // If customAlias is provided, filter for that specific alias
+                        // Otherwise, check if it exactly matches our key alias (default behavior)
+                        let shouldIncludeKey: Bool
+                        if let customAlias = customAlias as String? {
+                            let targetAlias = getKeyAlias(customAlias)
+                            shouldIncludeKey = keyTagString == targetAlias
+                        } else {
+                            // Default behavior: include all keys that exactly match our key alias pattern
+                            shouldIncludeKey = keyTagString == getKeyAlias()
+                        }
+                        
+                        if shouldIncludeKey {
+                            // Get the key reference
+                            guard let keyRef = item[kSecValueRef as String] as! SecKey? else {
+                                continue
+                            }
+                            
+                            // Get the public key from the private key reference
+                            if let publicKey = SecKeyCopyPublicKey(keyRef) {
+                                // Export the public key data
+                                if let publicKeyString = exportPublicKeyToBase64(publicKey) {
+                                    let keyInfo: [String: Any] = [
+                                        "alias": keyTagString,
+                                        "publicKey": publicKeyString
+                                    ]
+                                    
+                                    keysList.append(keyInfo)
+                                } else {
+                                }
+                            } else {
+                            }
+                        }
+                    }
+                }
+                
+                let resultDict: [String: Any] = [
+                    "keys": keysList
+                ]
+                
+                promise.resolve(resultDict)
+                
+            case errSecItemNotFound:
+                let resultDict: [String: Any] = [
+                    "keys": []
+                ]
+                promise.resolve(resultDict)
+                
+            default:
+                let biometricsError = BiometricsError.fromOSStatus(status)
+                handleError(biometricsError, promise:promise)
+            }
+        }
+        
         AsyncFunction("deleteKeysAsync") { (request:DeleteKeysRequest, promise:Promise) in
             let keyAlias = request.keyAlias
             let keyTag = getKeyAlias(keyAlias)
@@ -219,7 +318,7 @@ public class ExpoBiometricsModule: Module {
         
         
         AsyncFunction("createSignatureAsync") { (request: CreateSignatureRequest) async -> CreateSignatureResponse in
-            var response = CreateSignatureResponse()
+            let response = CreateSignatureResponse()
             var warningMessage: String?
             
             // Initialize biometric context
@@ -315,7 +414,6 @@ public class ExpoBiometricsModule: Module {
             let context = LAContext()
             let response = SimplePromptResponse()
             
-            let reason = request.promptMessage ?? ""
             let cancelLabel = request.cancelLabel
             let fallbackLabel = request.fallbackLabel
             
