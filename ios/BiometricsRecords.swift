@@ -7,6 +7,7 @@ struct CreateSignatureRequest:Record{
     @Field var cancelLabel: String?
     @Field var fallbackLabel: String?
     @Field var promptMessage: String?
+    @Field var keyAlias:String?
 }
 
 struct CreateSignatureResponse:Record{
@@ -32,4 +33,17 @@ struct SimplePromptResponse:Record{
     @Field var success:Bool = false
     @Field var error:String?
     @Field var warning:String?
+}
+
+struct DeleteKeysRequest:Record{
+    @Field var keyAlias:String?
+}
+
+struct DoesKeyExistRequest:Record{
+    @Field var keyAlias:String?
+}
+
+struct CreateKeysRequest:Record{
+    @Field var keyAlias:String?
+    @Field var keyType:String?
 }

@@ -4,17 +4,13 @@ import Security
 
 public class ExpoBiometricsModule: Module {
     
+    private var configuredKeyAlias: String? =  UserDefaults.standard.string(forKey: "ExpoBiometricsKeyAlias")
     
-    private lazy var defaultKeyTag: String = {
-        let bundleID = Bundle.main.bundleIdentifier ?? "com.expo.biometrics"
-        return "\(bundleID).biometricKey"
-    }()
-
     
     public func definition() -> ModuleDefinition {
         Name("ExpoBiometrics")
         
-        AsyncFunction("hasHardwareAsync") { () -> Bool in
+        AsyncFunction("hasHardware") { () -> Bool in
             let context = LAContext()
             var error: NSError?
             let isSupported: Bool = context.canEvaluatePolicy(
@@ -28,7 +24,7 @@ public class ExpoBiometricsModule: Module {
             return isAvailable
         }
         
-        AsyncFunction("isEnrolledAsync") { () -> Bool in
+        AsyncFunction("isEnrolled") { () -> Bool in
             let context = LAContext()
             var error: NSError?
             let isSupported: Bool = context.canEvaluatePolicy(
@@ -42,7 +38,7 @@ public class ExpoBiometricsModule: Module {
             return isEnrolled
         }
         
-        AsyncFunction("getEnrolledLevelAsync") { () -> Int in
+        AsyncFunction("getEnrolledLevel") { () -> Int in
             let context = LAContext()
             var error: NSError?
             
@@ -62,7 +58,7 @@ public class ExpoBiometricsModule: Module {
             return level
         }
         
-        AsyncFunction("supportedAuthenticationTypesAsync") { () -> [Int] in
+        AsyncFunction("supportedAuthenticationTypes") { () -> [Int] in
             var supportedAuthenticationTypes: [Int] = []
             
             if isTouchIdDevice() {
@@ -80,76 +76,331 @@ public class ExpoBiometricsModule: Module {
             return supportedAuthenticationTypes
         }
         
-        AsyncFunction("createKeysAsync") { () async -> CreateKeysResponse in
-            var response = CreateKeysResponse()
+        AsyncFunction("configureKeyAlias"){(keyAlias:String, promise:Promise) in
+            // Validate key alias
+            let aliasString = keyAlias as String
+            if aliasString.isEmpty {
+                handleError(BiometricsError.emptyKeyAlias, promise: promise)
+                return
+            }
+            // Store the configured key alias
+            configuredKeyAlias = aliasString
+            UserDefaults.standard.set(aliasString, forKey: "ReactNativeBiometricsKeyAlias")
             
-            guard let publicKey = self.createSecureEnclaveKey(tag: self.defaultKeyTag) else {
-                response.error = "Failed to create key pair"
-                return response
+            promise.resolve(nil)
+        }
+        
+        AsyncFunction("getDefaultKeyAlias"){(keyAlias:String, promise:Promise) in
+            let defaultAlias = getKeyAlias()
+            promise.resolve(defaultAlias)
+        }
+        
+        AsyncFunction("getAllKeys"){(_ customAlias: String, promise:Promise) in
+            
+            // Query to find all keys in the Keychain
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassKey,
+                kSecMatchLimit as String: kSecMatchLimitAll,
+                kSecReturnAttributes as String: true,
+                kSecReturnRef as String: true
+            ]
+            
+            var result: CFTypeRef?
+            let status = SecItemCopyMatching(query as CFDictionary, &result)
+            
+            switch status {
+            case errSecSuccess:
+                guard let items = result as? [[String: Any]] else {
+                    handleError(.keychainQueryFailed, promise:promise)
+                    return
+                }
+                
+                var keysList: [[String: Any]] = []
+                
+                for item in items {
+                    // Filter for our biometric keys
+                    if let keyTag = item[kSecAttrApplicationTag as String] as? Data,
+                       let keyTagString = String(data: keyTag, encoding: .utf8) {
+                        
+                        // If customAlias is provided, filter for that specific alias
+                        // Otherwise, check if it exactly matches our key alias (default behavior)
+                        let shouldIncludeKey: Bool
+                        if let customAlias = customAlias as String? {
+                            let targetAlias = getKeyAlias(customAlias)
+                            shouldIncludeKey = keyTagString == targetAlias
+                        } else {
+                            // Default behavior: include all keys that exactly match our key alias pattern
+                            shouldIncludeKey = keyTagString == getKeyAlias()
+                        }
+                        
+                        if shouldIncludeKey {
+                            // Get the key reference
+                            guard let keyRef = item[kSecValueRef as String] as! SecKey? else {
+                                continue
+                            }
+                            
+                            // Get the public key from the private key reference
+                            if let publicKey = SecKeyCopyPublicKey(keyRef) {
+                                // Export the public key data
+                                if let publicKeyString = exportPublicKeyToBase64(publicKey) {
+                                    let keyInfo: [String: Any] = [
+                                        "alias": keyTagString,
+                                        "publicKey": publicKeyString
+                                    ]
+                                    
+                                    keysList.append(keyInfo)
+                                } else {
+                                }
+                            } else {
+                            }
+                        }
+                    }
+                }
+                
+                let resultDict: [String: Any] = [
+                    "keys": keysList
+                ]
+                
+                promise.resolve(resultDict)
+                
+            case errSecItemNotFound:
+                let resultDict: [String: Any] = [
+                    "keys": []
+                ]
+                promise.resolve(resultDict)
+                
+            default:
+                let biometricsError = BiometricsError.fromOSStatus(status)
+                handleError(biometricsError, promise:promise)
+            }
+        }
+        
+        AsyncFunction("deleteKeys") { (request:DeleteKeysRequest, promise:Promise) in
+            let keyAlias = request.keyAlias
+            let keyTag = getKeyAlias(keyAlias)
+            
+            // Query to find the key
+            let query = createKeychainQuery(keyTag: keyTag, includeSecureEnclave: false)
+            
+            // Check if key exists first
+            let checkStatus = SecItemCopyMatching(query as CFDictionary, nil)
+            
+            if checkStatus == errSecItemNotFound {
+                print("No key found with tag '\(keyTag)' - nothing to delete")
+                promise.resolve(["success": true])
+                return
             }
             
-            response.publicKey = publicKey
-            response.success = true
-            return response
-        }
-        
-        AsyncFunction("deleteKeysAsync") { () -> Bool in
-            return self.deleteKey(tag: self.defaultKeyTag)
-        }
-        
-        AsyncFunction("doesKeyExistAsync") { () -> Bool in
-            return self.keyExists(tag: self.defaultKeyTag)
-        }
-        
-        
-        
-        AsyncFunction("createSignatureAsync") { (request: CreateSignatureRequest) async -> CreateSignatureResponse in
-            var response = CreateSignatureResponse()
-            var warningMessage:String?
-            let context = LAContext()
+            // Delete the key
+            let deleteStatus = SecItemDelete(query as CFDictionary)
             
+            switch deleteStatus {
+            case errSecSuccess:
+                print("Key with tag '\(keyTag)' deleted successfully")
+                
+                // Verify deletion
+                let verifyStatus = SecItemCopyMatching(query as CFDictionary, nil)
+                if verifyStatus == errSecItemNotFound {
+                    print("Keys deleted and verified successfully")
+                    promise.resolve(["success": true])
+                } else {
+                    print("deleteKeys failed - Key still exists after deletion attempt")
+                    handleError(.keyDeletionFailed, promise:promise)
+                }
+                
+            case errSecItemNotFound:
+                print("No key found with tag '\(keyTag)' - nothing to delete")
+                promise.resolve(["success": true])
+                
+            default:
+                print("deleteKeys failed - Keychain error: status \(deleteStatus)")
+                let biometricsError = BiometricsError.fromOSStatus(deleteStatus)
+                handleError(biometricsError, promise: promise)
+            }
+            
+            
+        }
+        
+        AsyncFunction("doesKeyExist") { (request:DoesKeyExistRequest, promise:Promise) in
+            let keyAlias = request.keyAlias
+            let keyTag = getKeyAlias(keyAlias)
+            
+            // Query to find the key (including Secure Enclave token for proper key lookup)
+            let query = createKeychainQuery(
+                keyTag: keyTag,
+                includeSecureEnclave: true,
+                returnRef: true,
+                returnAttributes: true
+            )
+            
+            var result: CFTypeRef?
+            let status = SecItemCopyMatching(query as CFDictionary, &result)
+            
+            
+            
+            promise.resolve(["keyExists":status==errSecSuccess])
+            return
+        }
+        
+        AsyncFunction("createKeys") { (request:CreateKeysRequest, promise:Promise) in
+            let keyAlias = request.keyAlias
+            let keyType = request.keyType
+            let keyTag = getKeyAlias(keyAlias as String?)
+            guard let keyTagData = keyTag.data(using: .utf8) else {
+                handleError(.dataEncodingFailed, promise: promise)
+                return
+            }
+            
+            let biometricKeyType: BiometricKeyType
+            if let keyTypeString = keyType as String?, keyTypeString.lowercased() == "rsa2048" {
+                biometricKeyType = .rsa2048
+            } else {
+                biometricKeyType = .ec256
+            }
+            
+            // Delete existing key if it exists
+            // For RSA keys, we need to delete without Secure Enclave attributes
+            // For EC keys, we include Secure Enclave attributes
+            let deleteQuery = createKeychainQuery(keyTag: keyTag, includeSecureEnclave: biometricKeyType == .ec256)
+            SecItemDelete(deleteQuery as CFDictionary)
+            
+            // Also try deleting without Secure Enclave attributes for RSA keys to ensure cleanup
+            if biometricKeyType == .rsa2048 {
+                let fallbackDeleteQuery = createKeychainQuery(keyTag: keyTag, includeSecureEnclave: false)
+                SecItemDelete(fallbackDeleteQuery as CFDictionary)
+            }
+            
+            // Create access control for biometric authentication
+            guard let accessControl = createBiometricAccessControl(for: biometricKeyType) else {
+                handleError(.accessControlCreationFailed, promise: promise)
+                return
+            }
+            
+            // Key generation parameters
+            let keyAttributes = createKeyGenerationAttributes(keyTagData: keyTagData, accessControl: accessControl, keyType: biometricKeyType)
+            
+            
+            var error: Unmanaged<CFError>?
+            guard let privateKey = SecKeyCreateRandomKey(keyAttributes as CFDictionary, &error) else {
+                let biometricsError = BiometricsError.keyCreationFailed
+                if let cfError = error?.takeRetainedValue() {
+                    print("createKeys failed - Key generation error: \(cfError.localizedDescription)")
+                } else {
+                    print("createKeys failed - Key generation error: Unknown")
+                }
+                handleError(biometricsError, promise: promise)
+                return
+            }
+            
+            // Get public key
+            guard let publicKey = SecKeyCopyPublicKey(privateKey) else {
+                print("createKeys failed - Could not extract public key")
+                handleError(.publicKeyExtractionFailed,promise: promise)
+                return
+            }
+            
+            // Export public key
+            guard let publicKeyBase64 = exportPublicKeyToBase64(publicKey) else {
+                print("createKeys failed - Public key export error")
+                handleError(.keyExportFailed, promise: promise)
+                return
+            }
+            
+            
+            promise.resolve([
+                "success":true,
+                "publicKey":publicKeyBase64
+            ])
+        }
+        
+        
+        
+        
+        
+        AsyncFunction("createSignature") { (request: CreateSignatureRequest) async -> CreateSignatureResponse in
+            let response = CreateSignatureResponse()
+            var warningMessage: String?
+            
+            // Initialize biometric context
+            let context = LAContext()
             context.localizedCancelTitle = request.cancelLabel
             context.localizedFallbackTitle = request.fallbackLabel
             
+            // Validate Face ID usage description
             if isFaceIdDevice() {
                 let usageDescription = Bundle.main.object(forInfoDictionaryKey: "NSFaceIDUsageDescription")
-                
                 if usageDescription == nil {
-                    warningMessage = "FaceID is available but has not been configured. To enable FaceID, provide `NSFaceIDUsageDescription`."
+                    warningMessage = "FaceID is available but has not been configured. To enable FaceID, provide `NSFaceIDUsageDescription` in Info.plist."
                 }
             }
             
-            
-            let policy = LAPolicy.deviceOwnerAuthenticationWithBiometrics
-            
-            if warningMessage != nil {
-                // If the warning message is set (NSFaceIDUsageDescription is not configured) then we can't use
-                // authentication with biometrics — it would crash, so let's just resolve with no success.
-                // We could reject, but we already resolve even if there are any errors, so sadly we would need to introduce a breaking change.
+            if let warning = warningMessage {
                 response.success = false
-                response.warning = warningMessage
+                response.warning = warning
                 return response
             }
             
+            let policy = LAPolicy.deviceOwnerAuthenticationWithBiometrics
+            let reason = request.promptMessage ?? "Authenticate to sign payload"
+            
             do {
-                let success = try await self.evaluateBiometricPolicy(
-                    context: context,
-                    reason: request.promptMessage ?? "Authenticate to sign payload",
-                    policy: policy
-                )
+                // 1️⃣ Always show biometric prompt before signing
+                let success = try await self.evaluateBiometricPolicy(context: context, reason: reason, policy: policy)
                 
                 guard success else {
-                    response.error = "User authentication failed or was canceled"
+                    response.success = false
+                    response.error = "User canceled or failed biometric authentication."
                     return response
                 }
                 
-                if let signature = self.signPayload(tag: self.defaultKeyTag, payload: request.payload, context: context) {
-                    response.signature = signature
-                    response.success = true
-                } else {
-                    response.error = "Failed to sign payload"
+                // 2️⃣ Retrieve Secure Enclave key
+                let keyTag = getKeyAlias(request.keyAlias)
+                let query = createKeychainQuery(
+                    keyTag: keyTag,
+                    includeSecureEnclave: true,
+                    returnRef: true
+                )
+                
+                var keyResult: CFTypeRef?
+                let status = SecItemCopyMatching(query as CFDictionary, &keyResult)
+                guard status == errSecSuccess, let keyRef = (keyResult as! SecKey?) else {
+                    response.success = false
+                    response.error = "Failed to retrieve Secure Enclave key."
+                    return response
                 }
+                
+                // 3️⃣ Create digital signature
+                guard let dataToSign = request.payload.data(using: .utf8) else {
+                    response.success = false
+                    response.error = "Invalid payload data."
+                    return response
+                }
+                
+                let algorithm = getSignatureAlgorithm(for: keyRef)
+                var signingError: Unmanaged<CFError>?
+                guard let signature = SecKeyCreateSignature(keyRef, algorithm, dataToSign as CFData, &signingError) else {
+                    if let cfError = signingError?.takeRetainedValue() {
+                        let code = CFErrorGetCode(cfError)
+                        if code == errSecUserCanceled {
+                            response.error = "User canceled biometric prompt."
+                        } else if code == errSecAuthFailed {
+                            response.error = "Biometric authentication failed."
+                        } else {
+                            response.error = "Signature creation failed: \(cfError.localizedDescription)"
+                        }
+                    } else {
+                        response.error = "Unknown error while creating signature."
+                    }
+                    response.success = false
+                    return response
+                }
+                
+                // 4️⃣ Return Base64 signature
+                response.signature = (signature as Data).base64EncodedString()
+                response.success = true
+                
             } catch {
+                response.success = false
                 response.error = error.localizedDescription
             }
             
@@ -157,12 +408,12 @@ public class ExpoBiometricsModule: Module {
         }
         
         
-        AsyncFunction("simplePromptAsync") { (request:SimplePromptRequest) async -> SimplePromptResponse in
+        
+        AsyncFunction("simplePrompt") { (request:SimplePromptRequest) async -> SimplePromptResponse in
             var warningMessage:String?
             let context = LAContext()
             let response = SimplePromptResponse()
             
-            let reason = request.promptMessage ?? ""
             let cancelLabel = request.cancelLabel
             let fallbackLabel = request.fallbackLabel
             
@@ -216,6 +467,10 @@ public class ExpoBiometricsModule: Module {
         }
     }
     
+    private func getKeyAlias(_ customAlias: String? = nil) -> String {
+        return generateKeyAlias(customAlias: customAlias, configuredAlias: configuredKeyAlias)
+    }
+    
     private func evaluateBiometricPolicy(
         context: LAContext,
         reason: String,
@@ -233,91 +488,6 @@ public class ExpoBiometricsModule: Module {
         }
     }
     
-    private func createSecureEnclaveKey(tag: String) -> String? {
-        let tagData = tag.data(using: .utf8)!
-        
-        let deleteQuery: [String: Any] = [
-            kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: tagData
-        ]
-        SecItemDelete(deleteQuery as CFDictionary)
-        
-        guard let access = SecAccessControlCreateWithFlags(
-            nil,
-            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            [.privateKeyUsage, .biometryAny],
-            nil
-        ) else {
-            return nil
-        }
-        
-        let attributes: [String: Any] = [
-            kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
-            kSecAttrKeySizeInBits as String: 256,
-            kSecAttrTokenID as String: kSecAttrTokenIDSecureEnclave,
-            kSecPrivateKeyAttrs as String: [
-                kSecAttrIsPermanent as String: true,
-                kSecAttrApplicationTag as String: tagData,
-                kSecAttrAccessControl as String: access
-            ]
-        ]
-        
-        var error: Unmanaged<CFError>?
-        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
-            return nil
-        }
-        
-        guard let publicKey = SecKeyCopyPublicKey(privateKey),
-              let data = SecKeyCopyExternalRepresentation(publicKey, nil) as Data? else {
-            return nil
-        }
-        return data.base64EncodedString()
-    }
-    
-    private func deleteKey(tag: String) -> Bool {
-        let tagData = tag.data(using: .utf8)!
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: tagData
-        ]
-        let status = SecItemDelete(query as CFDictionary)
-        return status == errSecSuccess || status == errSecItemNotFound
-    }
-    
-    private func keyExists(tag: String) -> Bool {
-        let tagData = tag.data(using: .utf8)!
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: tagData,
-            kSecReturnAttributes as String: true
-        ]
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        return status == errSecSuccess
-    }
-    
-    private func signPayload(tag: String, payload: String, context: LAContext) -> String? {
-        let tagData = tag.data(using: .utf8)!
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: tagData,
-            kSecReturnRef as String: true
-        ]
-        
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess, let privateKey = item as! SecKey? else {
-            return nil
-        }
-        
-        guard let data = payload.data(using: .utf8) else { return nil }
-        var error: Unmanaged<CFError>?
-        guard let signature = SecKeyCreateSignature(privateKey, .ecdsaSignatureMessageX962SHA256, data as CFData, &error) as Data? else {
-            return nil
-        }
-        
-        return signature.base64EncodedString()
-    }
 }
 
 func isFaceIdDevice() -> Bool {

@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { useThemedColors } from '../../hooks/useThemedColors';
-import { Text } from '../../components/ThemedText';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import ThemedText from '../components/ui/ThemedText';
 import ExpoBiometrics, {
 	AuthenticationType,
 	SecurityLevel,
 } from 'expo-biometrics';
+import { ThemedView } from '../components/ui/ThemedView';
 
-export default function Settings() {
-	const colors = useThemedColors();
-
+export default function SettingsScreen() {
 	const [isBiometricEnrolledInDevice, setIsBiometricEnrolledInDevice] =
 		useState<boolean>(false);
 	const [hasHardware, setHasHardware] = useState<boolean>(false);
@@ -21,7 +20,7 @@ export default function Settings() {
 
 	const checkSupportedAuthenticationType = async () => {
 		try {
-			const res = await ExpoBiometrics.supportedAuthenticationTypesAsync();
+			const res = await ExpoBiometrics.supportedAuthenticationTypes();
 			setSupportedAuthenticationTypes(res);
 		} catch (error) {
 			console.error(error);
@@ -30,7 +29,7 @@ export default function Settings() {
 
 	const checkHasHardware = async () => {
 		try {
-			const res = await ExpoBiometrics.hasHardwareAsync();
+			const res = await ExpoBiometrics.hasHardware();
 			setHasHardware(res);
 		} catch (error) {
 			console.error(error);
@@ -39,7 +38,7 @@ export default function Settings() {
 
 	const checkIsBiometricEnrolled = async () => {
 		try {
-			const res = await ExpoBiometrics.isEnrolledAsync();
+			const res = await ExpoBiometrics.isEnrolled();
 			setIsBiometricEnrolledInDevice(res);
 		} catch (error) {
 			console.error(error);
@@ -48,7 +47,7 @@ export default function Settings() {
 
 	const checkSecurityLevel = async () => {
 		try {
-			const res = await ExpoBiometrics.getEnrolledLevelAsync();
+			const res = await ExpoBiometrics.getEnrolledLevel();
 			setBiometricSecurityLevel(res);
 		} catch (error) {
 			console.error(error);
@@ -72,6 +71,7 @@ export default function Settings() {
 	};
 
 	const getEnrollmentLevel = () => {
+		console.log(biometricSecurityLevel);
 		switch (Number(biometricSecurityLevel.toFixed())) {
 			case SecurityLevel.BIOMETRIC_STRONG:
 				return 'Strong';
@@ -87,76 +87,111 @@ export default function Settings() {
 	useEffect(() => {
 		checkHasHardware();
 		checkIsBiometricEnrolled();
+		checkSecurityLevel();
 		checkSupportedAuthenticationType();
 	}, []);
 
 	return (
-		<ScrollView
-			contentInsetAdjustmentBehavior="automatic"
-			style={styles.container}
-		>
+		<ThemedView style={styles.container}>
 			<View style={styles.content}>
-				<Text
-					size="header"
-					style={styles.title}
+				<ThemedText
+					type="title"
+					style={[styles.title]}
 				>
 					Settings
-				</Text>
+				</ThemedText>
 
 				<View style={styles.section}>
-					<Text
-						size="caption"
-						style={styles.sectionTitle}
+					<ThemedText
+						type="sectionTitle"
+						style={[styles.sectionTitle]}
 					>
 						BIOMETRIC STATUS
-					</Text>
+					</ThemedText>
 					<View style={styles.row}>
-						<Text style={styles.label}>Available</Text>
-						<Text style={styles.value}>{hasHardware ? 'Yes' : 'No'}</Text>
+						<ThemedText
+							type="subtitle"
+							style={[styles.label]}
+						>
+							Available
+						</ThemedText>
+						<ThemedText
+							type="subtitle"
+							style={[styles.value]}
+						>
+							{hasHardware ? 'Yes' : 'No'}
+						</ThemedText>
 					</View>
 
 					<View style={styles.row}>
-						<Text style={styles.label}>Authentication Type</Text>
-						<Text style={styles.value}>{getAuthenticationType()}</Text>
+						<ThemedText
+							type="subtitle"
+							style={[styles.label]}
+						>
+							Authentication Type
+						</ThemedText>
+						<ThemedText
+							type="subtitle"
+							style={[styles.value]}
+						>
+							{getAuthenticationType()}
+						</ThemedText>
 					</View>
 				</View>
 
 				<View style={styles.section}>
-					<Text
-						size="caption"
-						style={styles.sectionTitle}
+					<ThemedText
+						type="sectionTitle"
+						style={[styles.sectionTitle]}
 					>
 						ENROLLMENT STATUS
-					</Text>
+					</ThemedText>
 					<View style={styles.row}>
-						<Text style={styles.label}>Biometric Enrolled</Text>
-						<Text style={styles.value}>
+						<ThemedText
+							type="subtitle"
+							style={[styles.label]}
+						>
+							Biometric Enrolled
+						</ThemedText>
+						<ThemedText
+							type="subtitle"
+							style={[styles.value]}
+						>
 							{isBiometricEnrolledInDevice ? 'Yes' : 'No'}
-						</Text>
+						</ThemedText>
 					</View>
 
 					<View style={styles.row}>
-						<Text style={styles.label}>Enrollment Level</Text>
-						<Text style={styles.value}>{getEnrollmentLevel()}</Text>
+						<ThemedText
+							type="subtitle"
+							style={[styles.label]}
+						>
+							Enrollment Level
+						</ThemedText>
+						<ThemedText
+							type="subtitle"
+							style={[styles.value]}
+						>
+							{getEnrollmentLevel()}
+						</ThemedText>
 					</View>
 				</View>
 
 				<View style={styles.banner}>
-					<Text
-						size="caption"
-						style={styles.bannerText}
-					>
-						Powered by Expo Modules
-					</Text>
+					<ThemedText type="subtitle">Powered by Expo Modules</ThemedText>
 				</View>
 			</View>
-		</ScrollView>
+		</ThemedView>
 	);
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create((_theme, rt) => ({
 	container: {
 		flex: 1,
+		paddingTop: rt.insets.top,
+		paddingBottom: rt.insets.bottom,
+		paddingLeft: rt.insets.left,
+		paddingRight: rt.insets.right,
 	},
 	content: {
 		padding: 20,
@@ -184,33 +219,6 @@ const styles = StyleSheet.create({
 	value: {
 		fontWeight: '500',
 	},
-	voiceList: {
-		flexDirection: 'row',
-		gap: 12,
-	},
-	voiceItem: {
-		paddingVertical: 12,
-		paddingHorizontal: 16,
-		borderWidth: 1,
-		borderRadius: 8,
-		minWidth: 120,
-		alignItems: 'center',
-	},
-	voiceText: {
-		fontSize: 14,
-		fontWeight: '500',
-		marginBottom: 2,
-	},
-	voiceLanguage: {
-		opacity: 0.6,
-	},
-	voiceHint: {
-		opacity: 0.5,
-		marginTop: 12,
-	},
-	pressed: {
-		opacity: 0.7,
-	},
 	banner: {
 		marginTop: 40,
 		paddingVertical: 20,
@@ -220,4 +228,4 @@ const styles = StyleSheet.create({
 		opacity: 0.4,
 		fontWeight: 'bold',
 	},
-});
+}));

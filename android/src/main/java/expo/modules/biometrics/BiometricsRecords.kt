@@ -27,6 +27,9 @@ internal class CreateSignatureRequest : Record {
 
     @Field
     val requireConfirmation: Boolean = true
+
+    @Field
+    val keyAlias:String?=null
 }
 
 internal class CreateSignatureResponse : Record {
@@ -55,4 +58,22 @@ internal class SimplePromptRequest:Record{
 
     @Field
     val requireConfirmation: Boolean = true
+}
+
+internal class DeleteKeysRequest:Record{
+    @Field
+    val keyAlias: String? = null
+}
+
+internal class DoesKeysExistRequest:Record{
+    @Field
+    val keyAlias: String? = null
+}
+
+internal class CreateKeysRequest:Record{
+    @Field
+    val keyAlias: String? = null
+
+    @Field
+    val keyType: String? = null
 }
