@@ -10,7 +10,7 @@ public class ExpoBiometricsModule: Module {
     public func definition() -> ModuleDefinition {
         Name("ExpoBiometrics")
         
-        AsyncFunction("hasHardwareAsync") { () -> Bool in
+        AsyncFunction("hasHardware") { () -> Bool in
             let context = LAContext()
             var error: NSError?
             let isSupported: Bool = context.canEvaluatePolicy(
@@ -24,7 +24,7 @@ public class ExpoBiometricsModule: Module {
             return isAvailable
         }
         
-        AsyncFunction("isEnrolledAsync") { () -> Bool in
+        AsyncFunction("isEnrolled") { () -> Bool in
             let context = LAContext()
             var error: NSError?
             let isSupported: Bool = context.canEvaluatePolicy(
@@ -38,7 +38,7 @@ public class ExpoBiometricsModule: Module {
             return isEnrolled
         }
         
-        AsyncFunction("getEnrolledLevelAsync") { () -> Int in
+        AsyncFunction("getEnrolledLevel") { () -> Int in
             let context = LAContext()
             var error: NSError?
             
@@ -58,7 +58,7 @@ public class ExpoBiometricsModule: Module {
             return level
         }
         
-        AsyncFunction("supportedAuthenticationTypesAsync") { () -> [Int] in
+        AsyncFunction("supportedAuthenticationTypes") { () -> [Int] in
             var supportedAuthenticationTypes: [Int] = []
             
             if isTouchIdDevice() {
@@ -175,7 +175,7 @@ public class ExpoBiometricsModule: Module {
             }
         }
         
-        AsyncFunction("deleteKeysAsync") { (request:DeleteKeysRequest, promise:Promise) in
+        AsyncFunction("deleteKeys") { (request:DeleteKeysRequest, promise:Promise) in
             let keyAlias = request.keyAlias
             let keyTag = getKeyAlias(keyAlias)
             
@@ -221,7 +221,7 @@ public class ExpoBiometricsModule: Module {
             
         }
         
-        AsyncFunction("doesKeyExistAsync") { (request:DoesKeyExistRequest, promise:Promise) in
+        AsyncFunction("doesKeyExist") { (request:DoesKeyExistRequest, promise:Promise) in
             let keyAlias = request.keyAlias
             let keyTag = getKeyAlias(keyAlias)
             
@@ -242,7 +242,7 @@ public class ExpoBiometricsModule: Module {
             return
         }
         
-        AsyncFunction("createKeysAsync") { (request:CreateKeysRequest, promise:Promise) in
+        AsyncFunction("createKeys") { (request:CreateKeysRequest, promise:Promise) in
             let keyAlias = request.keyAlias
             let keyType = request.keyType
             let keyTag = getKeyAlias(keyAlias as String?)
@@ -317,7 +317,7 @@ public class ExpoBiometricsModule: Module {
         
         
         
-        AsyncFunction("createSignatureAsync") { (request: CreateSignatureRequest) async -> CreateSignatureResponse in
+        AsyncFunction("createSignature") { (request: CreateSignatureRequest) async -> CreateSignatureResponse in
             let response = CreateSignatureResponse()
             var warningMessage: String?
             
@@ -409,7 +409,7 @@ public class ExpoBiometricsModule: Module {
         
         
         
-        AsyncFunction("simplePromptAsync") { (request:SimplePromptRequest) async -> SimplePromptResponse in
+        AsyncFunction("simplePrompt") { (request:SimplePromptRequest) async -> SimplePromptResponse in
             var warningMessage:String?
             let context = LAContext()
             let response = SimplePromptResponse()
