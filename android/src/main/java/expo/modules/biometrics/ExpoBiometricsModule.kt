@@ -10,6 +10,7 @@ import android.util.Base64
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.fragment.app.FragmentActivity
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.CodedException
@@ -24,6 +25,7 @@ import java.security.KeyStore
 import java.security.KeyStoreException
 import java.security.NoSuchAlgorithmException
 import java.security.NoSuchProviderException
+import java.security.UnrecoverableKeyException
 import java.security.Signature
 import java.security.cert.CertificateException
 import java.security.interfaces.ECKey
@@ -47,7 +49,7 @@ class ExpoBiometricsModule : Module() {
     override fun definition() = ModuleDefinition {
         Name("ExpoBiometrics")
 
-        AsyncFunction<Set<Int>>("supportedAuthenticationTypesAsync") {
+        AsyncFunction<Set<Int>>("supportedAuthenticationTypes") {
             val results = mutableSetOf<Int>()
             if (canAuthenticateUsingWeakBiometrics() == BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE) {
                 return@AsyncFunction results
@@ -75,15 +77,15 @@ class ExpoBiometricsModule : Module() {
             return@AsyncFunction results
         }
 
-        AsyncFunction<Boolean>("hasHardwareAsync") {
+        AsyncFunction<Boolean>("hasHardware") {
             canAuthenticateUsingWeakBiometrics() != BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE
         }
 
-        AsyncFunction<Boolean>("isEnrolledAsync") {
+        AsyncFunction<Boolean>("isEnrolled") {
             canAuthenticateUsingWeakBiometrics() == BiometricManager.BIOMETRIC_SUCCESS
         }
 
-        AsyncFunction<Int>("getEnrolledLevelAsync") {
+        AsyncFunction<Int>("getEnrolledLevel") {
             var level = SECURITY_LEVEL_NONE
             if (isDeviceSecure) {
                 level = SECURITY_LEVEL_SECRET
@@ -97,7 +99,99 @@ class ExpoBiometricsModule : Module() {
             return@AsyncFunction level
         }
 
-        AsyncFunction("createKeysAsync") { request: CreateKeysRequest, promise: Promise ->
+        AsyncFunction("configureKeyAlias"){ keyAlias: String, promise: Promise ->
+            if (keyAlias.isEmpty()) {
+                promise.reject("INVALID_KEY_ALIAS", "Key alias cannot be empty", null)
+            }
+
+            configuredKeyAlias = keyAlias
+            val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            sharedPrefs.edit{putString(KEY_ALIAS_PREF, keyAlias)}
+
+            debugLog("Key alias configured successfully: $keyAlias")
+            promise.resolve(null)
+        }
+
+        AsyncFunction("getDefaultKeyAlias"){promise:Promise ->
+            val currentAlias = getKeyAlias()
+            debugLog("getDefaultKeyAlias returning: $currentAlias")
+            promise.resolve(currentAlias)
+        }
+
+        AsyncFunction("getAllKeys"){customAlias:String?, promise:Promise->
+            debugLog("getAllKeys called with customAlias: ${customAlias ?: "null"}")
+            try {
+                val keyStore = KeyStore.getInstance("AndroidKeyStore")
+                keyStore.load(null)
+
+                val keysList = mutableListOf<Map<String, String>>()
+                val aliases = keyStore.aliases()
+
+                while (aliases.hasMoreElements()) {
+                    val alias = aliases.nextElement()
+
+                    // Filter for our biometric keys
+                    val shouldIncludeKey = if (customAlias != null) {
+                        // If customAlias is provided, filter for that specific alias
+                        alias.equals(getKeyAlias(customAlias))
+                    } else {
+                        // Default behavior: check if it contains the default key alias
+                        alias.equals(getKeyAlias())
+                    }
+
+                    if (shouldIncludeKey) {
+                        try {
+                            val keyEntry = keyStore.getEntry(alias, null)
+                            if (keyEntry is KeyStore.PrivateKeyEntry) {
+                                val publicKey = keyEntry.certificate.publicKey
+                                val publicKeyBytes = publicKey.encoded
+                                val publicKeyString = encodeBase64(publicKeyBytes)
+
+                                val keyInfo = mutableMapOf<String, String>()
+                                keyInfo.put("alias", alias)
+                                keyInfo.put("publicKey", publicKeyString)
+                                // Note: Android KeyStore doesn't provide creation date easily
+                                // You could store this separately if needed
+
+                                keysList.add(keyInfo)
+                                debugLog("Found key with alias: $alias")
+                            }
+                        } catch (e: Exception) {
+                            debugLog("Error processing key $alias: ${e.message}")
+                            // Continue with other keys
+                        }
+                    }
+                }
+
+                val result = mapOf(
+                    "keys" to keysList
+                )
+
+                debugLog("getAllKeys completed successfully, found ${keysList.size} keys")
+                promise.resolve(result)
+
+            } catch (e: KeyStoreException) {
+                debugLog("getAllKeys failed - KeyStore error: ${e.message}")
+                promise.reject("GET_ALL_KEYS_ERROR", "KeyStore error: ${e.message}", e)
+            } catch (e: CertificateException) {
+                debugLog("getAllKeys failed - Certificate error: ${e.message}")
+                promise.reject("GET_ALL_KEYS_ERROR", "Certificate error: ${e.message}", e)
+            } catch (e: IOException) {
+                debugLog("getAllKeys failed - IO error: ${e.message}")
+                promise.reject("GET_ALL_KEYS_ERROR", "IO error: ${e.message}", e)
+            } catch (e: NoSuchAlgorithmException) {
+                debugLog("getAllKeys failed - Algorithm error: ${e.message}")
+                promise.reject("GET_ALL_KEYS_ERROR", "Algorithm error: ${e.message}", e)
+            } catch (e: UnrecoverableKeyException) {
+                debugLog("getAllKeys failed - Unrecoverable key error: ${e.message}")
+                promise.reject("GET_ALL_KEYS_ERROR", "Unrecoverable key error: ${e.message}", e)
+            } catch (e: Exception) {
+                debugLog("getAllKeys failed - Unexpected error: ${e.message}")
+                promise.reject("GET_ALL_KEYS_ERROR", "Failed to get all keys: ${e.message}", e)
+            }
+        }
+
+        AsyncFunction("createKeys") { request: CreateKeysRequest, promise: Promise ->
             val actualKeyAlias = getKeyAlias(request.keyAlias)
             val actualKeyType = request.keyType?.lowercase() ?: "rsa2048"
             debugLog("createKeys called with keyAlias: ${request.keyAlias ?: "default"}, using: $actualKeyAlias, keyType: $actualKeyType")
@@ -161,7 +255,7 @@ class ExpoBiometricsModule : Module() {
                             .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1) // This will be ignored for EC
                             .setKeySize(256)
                             .setUserAuthenticationRequired(true)
-                            .setUserAuthenticationValidityDurationSeconds(-1) // Require auth for every use
+                            .setUserAuthenticationValidityDurationSeconds(-1)
                             .build()
 
                         keyPairGenerator.initialize(keyGenParameterSpec)
@@ -216,7 +310,7 @@ class ExpoBiometricsModule : Module() {
             }
         }
 
-        AsyncFunction("deleteKeysAsync") { request: DeleteKeysRequest, promise: Promise ->
+        AsyncFunction("deleteKeys") { request: DeleteKeysRequest, promise: Promise ->
             val actualKeyAlias = getKeyAlias(request.keyAlias)
             debugLog("deleteKeys called with keyAlias: ${request.keyAlias ?: "default"}, using: $actualKeyAlias")
             try {
@@ -272,7 +366,7 @@ class ExpoBiometricsModule : Module() {
             }
         }
 
-        AsyncFunction("doesKeyExistAsync") { request: DoesKeysExistRequest, promise: Promise ->
+        AsyncFunction("doesKeyExist") { request: DoesKeysExistRequest, promise: Promise ->
             val keyStore = KeyStore.getInstance("AndroidKeyStore")
             keyStore.load(null)
             val result = keyStore.containsAlias(request.keyAlias)
@@ -284,7 +378,7 @@ class ExpoBiometricsModule : Module() {
             return@AsyncFunction
         }
 
-        AsyncFunction("createSignatureAsync") { request: CreateSignatureRequest, promise: Promise ->
+        AsyncFunction("createSignature") { request: CreateSignatureRequest, promise: Promise ->
             val actualKeyAlias = getKeyAlias(request.keyAlias)
             debugLog("createSignature called with keyAlias: ${request.keyAlias ?: "default"}, using: $actualKeyAlias")
 
@@ -397,7 +491,7 @@ class ExpoBiometricsModule : Module() {
             }
         }
 
-        AsyncFunction("simplePromptAsync") { request: SimplePromptRequest, promise: Promise ->
+        AsyncFunction("simplePrompt") { request: SimplePromptRequest, promise: Promise ->
             val activity = appContext.currentActivity as? FragmentActivity
                 ?: run {
                     promise.reject(Exceptions.MissingActivity())
@@ -520,4 +614,8 @@ fun getSignatureAlgorithm(key: java.security.Key): String {
         is ECKey -> "SHA256withECDSA"
         else -> "SHA256withRSA" // Default fallback
     }
+}
+
+fun encodeBase64(bytes: ByteArray): String {
+    return Base64.encodeToString(bytes, Base64.NO_WRAP)
 }
