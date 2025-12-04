@@ -68,6 +68,6 @@ StyleSheet.configure({
   },
   breakpoints,
   settings: {
-    initialTheme: "dark",
+    adaptiveThemes: true,
   },
 });

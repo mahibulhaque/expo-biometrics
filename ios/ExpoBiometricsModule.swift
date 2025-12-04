@@ -90,12 +90,12 @@ public class ExpoBiometricsModule: Module {
             promise.resolve(nil)
         }
         
-        AsyncFunction("getDefaultKeyAlias"){(keyAlias:String, promise:Promise) in
+        AsyncFunction("getDefaultKeyAlias"){(promise:Promise) in
             let defaultAlias = getKeyAlias()
             promise.resolve(defaultAlias)
         }
         
-        AsyncFunction("getAllKeys"){(_ customAlias: String, promise:Promise) in
+        AsyncFunction("getAllKeys"){(customAlias:String?, promise:Promise) in
             
             // Query to find all keys in the Keychain
             let query: [String: Any] = [
@@ -126,7 +126,7 @@ public class ExpoBiometricsModule: Module {
                         // Otherwise, check if it exactly matches our key alias (default behavior)
                         let shouldIncludeKey: Bool
                         if let customAlias = customAlias as String? {
-                            let targetAlias = getKeyAlias(customAlias)
+                            let targetAlias = getKeyAlias(customAlias: customAlias)
                             shouldIncludeKey = keyTagString == targetAlias
                         } else {
                             // Default behavior: include all keys that exactly match our key alias pattern
@@ -177,7 +177,7 @@ public class ExpoBiometricsModule: Module {
         
         AsyncFunction("deleteKeys") { (request:DeleteKeysRequest, promise:Promise) in
             let keyAlias = request.keyAlias
-            let keyTag = getKeyAlias(keyAlias)
+            let keyTag = getKeyAlias(customAlias: keyAlias)
             
             // Query to find the key
             let query = createKeychainQuery(keyTag: keyTag, includeSecureEnclave: false)
@@ -223,7 +223,7 @@ public class ExpoBiometricsModule: Module {
         
         AsyncFunction("doesKeyExist") { (request:DoesKeyExistRequest, promise:Promise) in
             let keyAlias = request.keyAlias
-            let keyTag = getKeyAlias(keyAlias)
+            let keyTag = getKeyAlias(customAlias: keyAlias)
             
             // Query to find the key (including Secure Enclave token for proper key lookup)
             let query = createKeychainQuery(
@@ -245,7 +245,7 @@ public class ExpoBiometricsModule: Module {
         AsyncFunction("createKeys") { (request:CreateKeysRequest, promise:Promise) in
             let keyAlias = request.keyAlias
             let keyType = request.keyType
-            let keyTag = getKeyAlias(keyAlias as String?)
+            let keyTag = getKeyAlias(customAlias: keyAlias)
             guard let keyTagData = keyTag.data(using: .utf8) else {
                 handleError(.dataEncodingFailed, promise: promise)
                 return
@@ -354,7 +354,7 @@ public class ExpoBiometricsModule: Module {
                 }
                 
                 // 2️⃣ Retrieve Secure Enclave key
-                let keyTag = getKeyAlias(request.keyAlias)
+                let keyTag = getKeyAlias(customAlias: request.keyAlias)
                 let query = createKeychainQuery(
                     keyTag: keyTag,
                     includeSecureEnclave: true,
@@ -467,7 +467,7 @@ public class ExpoBiometricsModule: Module {
         }
     }
     
-    private func getKeyAlias(_ customAlias: String? = nil) -> String {
+    private func getKeyAlias(customAlias: String? = nil) -> String {
         return generateKeyAlias(customAlias: customAlias, configuredAlias: configuredKeyAlias)
     }
     
