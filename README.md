@@ -54,7 +54,7 @@ When a user enrolls in biometrics, a key pair is generated. The private key is s
 ### 1. Import the module
 
 ```ts
-import ExpoBiometrics from 'expo-biometrics';
+import ExpoBiometrics from "expo-biometrics";
 ```
 
 ### 2. Check for hardware availability
@@ -62,11 +62,11 @@ import ExpoBiometrics from 'expo-biometrics';
 Before prompting for biometric authentication, ensure the device supports biometric hardware.
 
 ```ts
-const hasHardware = await ExpoBiometrics.hasHardwareAsync();
+const hasHardware = await ExpoBiometrics.hasHardware();
 
 if (!hasHardware) {
-	console.log('Biometric hardware not available on this device.');
-	return;
+  console.log("Biometric hardware not available on this device.");
+  return;
 }
 ```
 
@@ -75,11 +75,11 @@ if (!hasHardware) {
 Check if the user has enrolled any biometric credentials (e.g. fingerprints or Face ID):
 
 ```ts
-const isEnrolled = await ExpoBiometrics.isEnrolledAsync();
+const isEnrolled = await ExpoBiometrics.isEnrolled();
 
 if (!isEnrolled) {
-	console.log('No biometric credentials enrolled.');
-	return;
+  console.log("No biometric credentials enrolled.");
+  return;
 }
 ```
 
@@ -88,16 +88,16 @@ if (!isEnrolled) {
 Retrieve what kind of biometric authentication the device supports.
 
 ```ts
-import { AuthenticationType } from 'expo-biometrics';
+import { AuthenticationType } from "expo-biometrics";
 
-const types = await ExpoBiometrics.supportedAuthenticationTypesAsync();
+const types = await ExpoBiometrics.supportedAuthenticationTypes();
 
 if (types.includes(AuthenticationType.FINGERPRINT)) {
-	console.log('Fingerprint authentication supported');
+  console.log("Fingerprint authentication supported");
 }
 
 if (types.includes(AuthenticationType.FACIAL_RECOGNITION)) {
-	console.log('Facial recognition supported');
+  console.log("Facial recognition supported");
 }
 ```
 
@@ -106,19 +106,19 @@ if (types.includes(AuthenticationType.FACIAL_RECOGNITION)) {
 Determine how secure the enrolled biometric methods are.
 
 ```ts
-import { SecurityLevel } from 'expo-biometrics';
+import { SecurityLevel } from "expo-biometrics";
 
-const level = await ExpoBiometrics.getEnrolledLevelAsync();
+const level = await ExpoBiometrics.getEnrolledLevel();
 
 switch (level) {
-	case SecurityLevel.BIOMETRIC_STRONG:
-		console.log('Strong biometric authentication available.');
-		break;
-	case SecurityLevel.BIOMETRIC_WEAK:
-		console.log('Weak biometric authentication available.');
-		break;
-	default:
-		console.log('No biometric authentication available.');
+  case SecurityLevel.BIOMETRIC_STRONG:
+    console.log("Strong biometric authentication available.");
+    break;
+  case SecurityLevel.BIOMETRIC_WEAK:
+    console.log("Weak biometric authentication available.");
+    break;
+  default:
+    console.log("No biometric authentication available.");
 }
 ```
 
@@ -129,27 +129,27 @@ You can generate a public-private key pair protected by the device’s biometric
 ✅ Create keys
 
 ```ts
-const result = await ExpoBiometrics.createKeysAsync();
+const result = await ExpoBiometrics.createKeys();
 
 if (result.success) {
-	console.log('Public key:', result.publicKey);
+  console.log("Public key:", result.publicKey);
 } else {
-	console.error('Failed to create keys:', result.error);
+  console.error("Failed to create keys:", result.error);
 }
 ```
 
 🗑️ Delete keys
 
 ```ts
-const deleted = await ExpoBiometrics.deleteKeysAsync();
-console.log(deleted ? 'Keys deleted.' : 'Failed to delete keys.');
+const deleted = await ExpoBiometrics.deleteKeys();
+console.log(deleted ? "Keys deleted." : "Failed to delete keys.");
 ```
 
 🔍 Check if keys exist
 
 ```ts
-const exists = await ExpoBiometrics.doesKeyExistAsync();
-console.log(exists ? 'Keys already exist.' : 'No keys found.');
+const exists = await ExpoBiometrics.doesKeyExist();
+console.log(exists ? "Keys already exist." : "No keys found.");
 ```
 
 ### 7. Creating a biometric signature
@@ -157,19 +157,19 @@ console.log(exists ? 'Keys already exist.' : 'No keys found.');
 After registering the public key with your backend, you can create a signed payload to verify the user using biometrics.
 
 ```ts
-const payload = 'session_challenge_token_from_server';
+const payload = "session_challenge_token_from_server";
 
-const response = await ExpoBiometrics.createSignatureAsync({
-	payload,
-	promptMessage: 'Authenticate to sign in',
-	cancelLabel: 'Cancel',
+const response = await ExpoBiometrics.createSignature({
+  payload,
+  promptMessage: "Authenticate to sign in",
+  cancelLabel: "Cancel",
 });
 
 if (response.success) {
-	console.log('Signature:', response.signature);
-	// Send signature to backend for verification
+  console.log("Signature:", response.signature);
+  // Send signature to backend for verification
 } else {
-	console.error('Signature failed:', response.error);
+  console.error("Signature failed:", response.error);
 }
 ```
 
@@ -178,15 +178,15 @@ if (response.success) {
 Use this when you just want to confirm user identity (without key generation or signing).
 
 ```ts
-const result = await ExpoBiometrics.simplePromptAsync({
-	promptMessage: 'Authenticate to continue',
-	fallbackLabel: 'Use Passcode',
+const result = await ExpoBiometrics.simplePrompt({
+  promptMessage: "Authenticate to continue",
+  fallbackLabel: "Use Passcode",
 });
 
 if (result.success) {
-	console.log('Authentication successful!');
+  console.log("Authentication successful!");
 } else {
-	console.error('Authentication failed:', result.error);
+  console.error("Authentication failed:", result.error);
 }
 ```
 
