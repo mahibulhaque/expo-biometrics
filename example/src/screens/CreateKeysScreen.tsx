@@ -1,14 +1,12 @@
-import { View } from "react-native";
-import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { useState } from "react";
+import { View, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
-
+import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import ThemedText from "../components/ui/ThemedText";
 import { ThemedView } from "../components/ui/ThemedView";
 import { RootStackParamList } from "../navigators/RootNavigator";
-import { Pressable } from "react-native";
 import ExpoBiometricsModule from "expo-biometrics";
-import { useState } from "react";
 
 export default function CreateKeysScreen() {
   const { theme } = useUnistyles();
