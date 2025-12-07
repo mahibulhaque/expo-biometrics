@@ -29,6 +29,8 @@
       "predictiveBackGestureEnabled": false,
       "package": "expo.modules.biometrics.example"
     },
-    "plugins": []
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

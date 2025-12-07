@@ -1,4 +1,4 @@
-import { View, TouchableOpacity } from "react-native";
+import { View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Ionicons } from "@expo/vector-icons";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
@@ -7,10 +7,28 @@ import ThemedText from "../components/ui/ThemedText";
 import { ThemedView } from "../components/ui/ThemedView";
 import { RootStackParamList } from "../navigators/RootNavigator";
 import { Pressable } from "react-native";
+import ExpoBiometricsModule from "expo-biometrics";
+import { useState } from "react";
 
 export default function CreateKeysScreen() {
   const { theme } = useUnistyles();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [_, setPublicKey] = useState<string>("");
+
+  const onCreateKeysRequest = async () => {
+    try {
+      const res = await ExpoBiometricsModule.createKeys({});
+
+      console.log({ res });
+      if (res.success) {
+        setPublicKey(res.publicKey);
+      } else {
+        setPublicKey("");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -32,8 +50,18 @@ export default function CreateKeysScreen() {
 
       <View style={styles.content}>
         <ThemedText type="title" style={styles.title}>
-          Create Keypair Example
+          Create Keys Example
         </ThemedText>
+        <Pressable
+          onPress={onCreateKeysRequest}
+          style={({ pressed }) => [
+            styles.button,
+            { backgroundColor: theme.colors.tint },
+            pressed && { opacity: 0.8 },
+          ]}
+        >
+          <ThemedText style={styles.buttonText}>Create Keys</ThemedText>
+        </Pressable>
       </View>
     </ThemedView>
   );
@@ -42,7 +70,7 @@ export default function CreateKeysScreen() {
 const styles = StyleSheet.create((theme) => ({
   container: {
     flex: 1,
-    paddingTop: 40, // space for the header
+    paddingTop: 40,
   },
   header: {
     paddingHorizontal: 16,
@@ -51,12 +79,13 @@ const styles = StyleSheet.create((theme) => ({
   content: {
     padding: 20,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     flex: 1,
   },
   title: {
     marginBottom: 24,
   },
+
   backButton: {
     width: 40,
     height: 40,
@@ -68,5 +97,21 @@ const styles = StyleSheet.create((theme) => ({
   backButtonPressed: {
     opacity: 0.6,
     backgroundColor: theme.colors.dimmed,
+  },
+
+  button: {
+    width: "100%",
+    textAlign: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginTop: 20,
+  },
+  buttonText: {
+    color: theme.colors.background,
+    fontSize: 16,
+    fontWeight: "600",
   },
 }));

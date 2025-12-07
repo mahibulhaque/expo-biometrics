@@ -11,7 +11,6 @@
     "test": "expo-module test",
     "prepare": "husky",
     "prepublishOnly": "expo-module prepublishOnly",
-    "expo-module": "expo-module",
     "open:ios": "xed example/ios",
     "open:android": "open -a \"Android Studio\" example/android"
   },
@@ -43,15 +42,18 @@
     "@semantic-release/npm": "^13.1.2",
     "@types/invariant": "^2.2.37",
     "@types/react": "~19.1.0",
-    "expo": "~54.0.10",
+    "expo": "~54.0.27",
     "expo-module-scripts": "^5.0.7",
     "husky": "^9.1.7",
-    "react-native": "0.81.4",
+    "react-native": "0.81.5",
     "semantic-release": "^25.0.2"
   },
   "peerDependencies": {
     "expo": "*",
     "react": "*",
     "react-native": "*"
+  },
+  "dependencies": {
+    "react": "19.1.0"
   }
 }
