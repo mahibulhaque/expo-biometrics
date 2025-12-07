@@ -7,16 +7,16 @@ jobs:
   release:
     name: 🚀 Release Package
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
+      id-token: write
 
     steps:
       - name: ⬇️ Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: 🟩 Setup Node
         uses: actions/setup-node@v4
@@ -38,6 +38,6 @@ jobs:
 
       - name: 🚀 Release with semantic-release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
