@@ -1,6 +1,6 @@
 {
-  "name": "expo-biometrics",
-  "version": "1.0.1",
+  "name": "@mahibhaque/expo-biometrics",
+  "version": "0.1.0",
   "description": "A lightweight Expo library for biometric authentication across iOS and Android",
   "main": "build/index.js",
   "types": "build/index.d.ts",
