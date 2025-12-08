@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/mahibulhaque/expo-biometrics/compare/v1.0.0...v1.0.1) (2025-12-08)
+
+
+### Bug Fixes
+
+* update package version ([d944a76](https://github.com/mahibulhaque/expo-biometrics/commit/d944a76021a9c4bc703664858b4a6d5ab62776eb))
+
 # 1.0.0 (2025-12-08)
 
 
