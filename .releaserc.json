@@ -5,6 +5,7 @@
     { "name": "beta", "prerelease": true }
   ],
   "tagFormat": "v${version}",
+  "repositoryUrl": "https://github.com/mahibulhaque/expo-biometrics",
   "plugins": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
@@ -20,7 +21,12 @@
         "npmPublish": true
       }
     ],
-    "@semantic-release/github",
+    [
+      "@semantic-release/github",
+      {
+        "assets": []
+      }
+    ],
     [
       "@semantic-release/git",
       {
