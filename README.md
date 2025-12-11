@@ -46,8 +46,8 @@ For bare React Native projects, you must ensure that you have [installed and con
 
 ### Add the package to your npm dependencies
 
-```
-npx expo install expo-biometrics
+```bash
+npx expo install "@mahibhaque/expo-biometrics"
 ```
 
 > **⚠️ Important:** The module requires development builds (`npx expo run:ios --device`) or (`npx expo run:android --device`). Does not work with Expo Go and Xcode simulator or Android Simulator.
