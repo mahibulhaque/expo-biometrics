@@ -10,7 +10,7 @@ A lightweight and easy-to-use Expo library for implementing secure biometric aut
 <p>
     <img src="https://img.shields.io/npm/v/@mahibhaque/expo-biometrics?style=for-the-badge&color=red" alt="npm version" />
     <img src="https://img.shields.io/npm/dt/@mahibhaque/expo-biometrics?style=for-the-badge&color=green" alt="downloads" />
-    <img src="https://img.shields.io/github/license/mahibhaque/expo-biometrics?style=for-the-badge&color=orange" alt="license" />
+    <img src="https://img.shields.io/github/license/mahibulhaque/expo-biometrics?style=for-the-badge&color=orange" alt="license" />
     <img src="https://img.shields.io/npm/types/@mahibhaque/expo-biometrics?style=for-the-badge&color=blue" alt="typescript" />
   </p>
 
