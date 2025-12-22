@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/mahibulhaque/expo-biometrics/compare/v1.0.1...v1.1.0) (2025-12-22)
+
+
+### Features
+
+* add debug mode support ([31874fc](https://github.com/mahibulhaque/expo-biometrics/commit/31874fc627049679efb681748c73b82710d04781))
+
 ## [1.0.1](https://github.com/mahibulhaque/expo-biometrics/compare/v1.0.0...v1.0.1) (2025-12-08)
 
 
