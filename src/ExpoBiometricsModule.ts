@@ -33,6 +33,7 @@ declare class ExpoBiometricsModule extends NativeModule {
     request: CreateSignatureRequest
   ): Promise<CreateSignatureResponse>;
   simplePrompt(request: SimplePromptRequest): Promise<SimplePromptResponse>;
+  setDebugMode(enabled:boolean):Promise<void>;
 }
 
 // This call loads the native module object from the JSI.

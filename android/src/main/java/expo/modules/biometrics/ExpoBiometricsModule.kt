@@ -101,7 +101,7 @@ class ExpoBiometricsModule : Module() {
 
         AsyncFunction("setDebugMode"){enabled:Boolean, promise: Promise->
             val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            sharedPrefs.edit { putBoolean("BiometricsDebugMode", enabled) }
+            sharedPrefs.edit { putBoolean("debugMode", enabled) }
             if (enabled) {
               android.util.Log.d("ReactNativeBiometrics", "Debug mode enabled")
             } else {
