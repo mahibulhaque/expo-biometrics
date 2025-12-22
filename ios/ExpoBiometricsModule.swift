@@ -21,6 +21,8 @@ public class ExpoBiometricsModule: Module {
             isSupported
             || error?.code != LAError.biometryNotAvailable.rawValue
             
+            BiometricsDebug.debugLog("hasHardware result: available=\(isAvailable)")
+            
             return isAvailable
         }
         
@@ -34,6 +36,9 @@ public class ExpoBiometricsModule: Module {
             let isEnrolled: Bool =
             (isSupported && error == nil)
             || error?.code == LAError.biometryLockout.rawValue
+            
+            BiometricsDebug.debugLog("isEnrolled result: enrolled=\(isEnrolled)")
+            
             
             return isEnrolled
         }
@@ -55,6 +60,9 @@ public class ExpoBiometricsModule: Module {
                 level = SecurityLevel.biometric.rawValue
             }
             
+            BiometricsDebug.debugLog("getEnrolledLevel result: getEnrolledLevel=\(level)")
+            
+            
             return level
         }
         
@@ -73,10 +81,26 @@ public class ExpoBiometricsModule: Module {
                 )
             }
             
+            BiometricsDebug.debugLog("supportedAuthenticationTypes function called: result=\(supportedAuthenticationTypes)")
+            
+            
             return supportedAuthenticationTypes
         }
         
+        AsyncFunction("setDebugMode"){(enabled:Bool, promise:Promise) in
+            UserDefaults.standard.set(enabled, forKey: "ReactNativeBiometricsDebugMode")
+            if enabled {
+                print("[ReactNativeBiometrics] Debug mode enabled")
+            } else {
+                print("[ReactNativeBiometrics] Debug mode disabled")
+            }
+            promise.resolve(nil)
+        }
+        
         AsyncFunction("configureKeyAlias"){(keyAlias:String, promise:Promise) in
+            
+            BiometricsDebug.debugLog("configureKeyAlias called with: \(keyAlias)")
+            
             // Validate key alias
             let aliasString = keyAlias as String
             if aliasString.isEmpty {
@@ -92,10 +116,12 @@ public class ExpoBiometricsModule: Module {
         
         AsyncFunction("getDefaultKeyAlias"){(promise:Promise) in
             let defaultAlias = getKeyAlias()
+            BiometricsDebug.debugLog("getDefaultKeyAlias returning: \(defaultAlias)")
             promise.resolve(defaultAlias)
         }
         
         AsyncFunction("getAllKeys"){(customAlias:String?, promise:Promise) in
+            BiometricsDebug.debugLog("getAllKeys called with customAlias: \(customAlias ?? "nil")")
             
             // Query to find all keys in the Keychain
             let query: [String: Any] = [
@@ -176,6 +202,9 @@ public class ExpoBiometricsModule: Module {
         }
         
         AsyncFunction("deleteKeys") { (request:DeleteKeysRequest, promise:Promise) in
+            BiometricsDebug.debugLog("deleteKeys called with keyAlias: \(request.keyAlias ?? "default")")
+            
+            
             let keyAlias = request.keyAlias
             let keyTag = getKeyAlias(customAlias: keyAlias)
             
@@ -222,6 +251,9 @@ public class ExpoBiometricsModule: Module {
         }
         
         AsyncFunction("doesKeyExist") { (request:DoesKeyExistRequest, promise:Promise) in
+            BiometricsDebug.debugLog("doesKeyExist function called: with key alias=\(request.keyAlias ?? "default")")
+            
+            
             let keyAlias = request.keyAlias
             let keyTag = getKeyAlias(customAlias: keyAlias)
             
@@ -243,6 +275,8 @@ public class ExpoBiometricsModule: Module {
         }
         
         AsyncFunction("createKeys") { (request:CreateKeysRequest, promise:Promise) in
+            BiometricsDebug.debugLog("createKeys called with keyAlias: \(request.keyAlias ?? "default"), keyType: \(request.keyType ?? "ec256")")
+            
             let keyAlias = request.keyAlias
             let keyType = request.keyType
             let keyTag = getKeyAlias(customAlias: keyAlias)
@@ -318,6 +352,9 @@ public class ExpoBiometricsModule: Module {
         
         
         AsyncFunction("createSignature") { (request: CreateSignatureRequest) async -> CreateSignatureResponse in
+            BiometricsDebug.debugLog("createSignature function called, with following request: \(request)")
+            
+            
             let response = CreateSignatureResponse()
             var warningMessage: String?
             
@@ -416,6 +453,8 @@ public class ExpoBiometricsModule: Module {
             
             let cancelLabel = request.cancelLabel
             let fallbackLabel = request.fallbackLabel
+            
+            BiometricsDebug.debugLog("simplePrompt called with prompt: \(request.promptMessage ?? "")")
             
             
             if fallbackLabel != nil {

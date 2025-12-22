@@ -99,6 +99,17 @@ class ExpoBiometricsModule : Module() {
             return@AsyncFunction level
         }
 
+        AsyncFunction("setDebugMode"){enabled:Boolean, promise: Promise->
+            val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            sharedPrefs.edit { putBoolean("BiometricsDebugMode", enabled) }
+            if (enabled) {
+              android.util.Log.d("ReactNativeBiometrics", "Debug mode enabled")
+            } else {
+              android.util.Log.d("ReactNativeBiometrics", "Debug mode disabled")
+            }
+            promise.resolve(null)
+        }
+
         AsyncFunction("configureKeyAlias"){ keyAlias: String, promise: Promise ->
             if (keyAlias.isEmpty()) {
                 promise.reject("INVALID_KEY_ALIAS", "Key alias cannot be empty", null)
